@@ -14,7 +14,7 @@ import { AdminUser } from '../entities/admin-user.entity';
 import { AdminUserService } from '../services/admin-user.service';
 
 @Controller('admin/profile')
-@Authenticated()
+@Authenticated('admin')
 export class AdminProfileController {
   constructor(private readonly adminUserService: AdminUserService) {}
   @Get('me')

@@ -1,4 +1,8 @@
 export class AuthUserPayload {
+  userId: number;
+}
+
+export class AdminUserPayload {
   userId: string;
 }
 

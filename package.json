@@ -35,6 +35,7 @@
     "@nestjs/terminus": "11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@telegraf/session": "2.0.0-beta.7",
+    "@telegram-apps/init-data-node": "2.0.4",
     "argon2": "0.41.1",
     "axios": "^1.8.4",
     "big.js": "7.0.1",

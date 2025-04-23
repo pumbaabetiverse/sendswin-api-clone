@@ -5,7 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AdminModule } from '../admin/admin.module';
 import { AuthAdminController } from './auth-admin.controller';
 import { AuthSignService } from './auth-sign.service';
-import { AdminGuard } from './auth.guard';
+import { AdminGuard, TeleAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
 @Global()
@@ -27,7 +27,7 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthAdminController],
-  providers: [AuthService, AdminGuard, AuthSignService],
+  providers: [AuthService, AdminGuard, TeleAuthGuard, AuthSignService],
   exports: [AuthService, AuthSignService],
 })
 export class AuthModule {}
