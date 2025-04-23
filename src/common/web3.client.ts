@@ -1,4 +1,5 @@
 import {
+  Address,
   createPublicClient,
   createWalletClient,
   defineChain,
@@ -81,7 +82,9 @@ export function getPublicClient(chainName?: string) {
 }
 
 export function getWalletClient(privateKey: string, chainName?: string) {
-  const account = privateKeyToAccount(`0x${privateKey}`);
+  const account = privateKey.startsWith('0x')
+    ? privateKeyToAccount(privateKey as Address)
+    : privateKeyToAccount(`0x${privateKey}`);
   const chain = getChain(chainName);
   return createWalletClient({
     account,
