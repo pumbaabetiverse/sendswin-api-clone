@@ -57,7 +57,7 @@ export class WithdrawService {
       const withdraw = await this.withdrawRepository.save(
         this.withdrawRepository.create({
           userId,
-          payout: payout.toString(),
+          payout,
           currency: BlockchainToken.USDT,
           walletAddress: user.walletAddress,
           depositOrderId,

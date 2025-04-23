@@ -59,7 +59,7 @@ export class DepositsService {
           try {
             // console.log(item.payerInfo);
             const amount = parseFloat(item.amount);
-            // Check if this is a C2C transaction, with amount between 10 and 50, and currency is USDT
+            // Check if this is a C2C transaction, with amount between 10 and 50, and the currency is USDT
             if (
               item.orderType === 'C2C' &&
               item.currency === 'USDT' &&
@@ -71,7 +71,7 @@ export class DepositsService {
               });
 
               if (!existingDeposit) {
-                // Add to deposit process queue
+                // Add to the deposit process queue
                 await this.depositProcessQueue.add(
                   'process-deposit',
                   {
@@ -123,7 +123,7 @@ export class DepositsService {
         parseInt(transactionId.charAt(transactionId.length - 3), 10)) %
       10;
 
-    // Check if sum digit is a number
+    // Check if the sum digit is a number
     if (isNaN(sumDigit)) {
       this.logger.warn(
         `Last character of transactionId is not a digit: ${transactionId}`,
@@ -175,7 +175,7 @@ export class DepositsService {
         return;
       }
 
-      // Create new deposit
+      // Create a new deposit
       const deposit = new Deposit();
       deposit.uid = item.uid;
       deposit.counterpartyId = item.counterpartyId;
@@ -184,7 +184,7 @@ export class DepositsService {
       deposit.orderType = item.orderType;
       deposit.transactionId = item.transactionId;
       deposit.transactionTime = new Date(item.transactionTime);
-      deposit.amount = item.amount;
+      deposit.amount = amount;
       deposit.currency = item.currency;
       deposit.walletType = item.walletType;
       deposit.totalPaymentFee = item.totalPaymentFee;
@@ -247,8 +247,7 @@ export class DepositsService {
             SettingKey.OVER_UNDER_MULTIPLIER,
             1.95,
           );
-          const payout = parseFloat(item.amount) * multiplier;
-          deposit.payout = payout.toFixed(6);
+          deposit.payout = amount * multiplier;
         }
       } else if (account.option == DepositOption.LUCKY_NUMBER) {
         const minAmount = await this.settingService.getFloatSetting(
@@ -271,8 +270,7 @@ export class DepositsService {
             SettingKey.LUCKY_NUMBER_MULTIPLIER,
             300,
           );
-          const payout = parseFloat(item.amount) * multiplier;
-          deposit.payout = payout.toFixed(6);
+          deposit.payout = amount * multiplier;
         }
       }
 
@@ -290,7 +288,7 @@ export class DepositsService {
           'withdraw',
           {
             userId: user.id,
-            payout: parseFloat(deposit.payout),
+            payout: deposit.payout,
             depositOrderId: deposit.orderId,
           },
           {

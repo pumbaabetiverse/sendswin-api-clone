@@ -6,6 +6,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ColumnNumericTransformer } from '@/common/ColumnNumericTransformer';
 
 export enum DepositResult {
   WIN = 'win',
@@ -47,13 +48,23 @@ export class Deposit {
   @Column()
   transactionTime: Date;
 
-  @Column()
-  amount: string;
+  @Column({
+    type: 'numeric',
+    precision: 18,
+    scale: 6,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
+  amount: number;
 
   @Column({
-    default: '0',
+    type: 'numeric',
+    precision: 18,
+    scale: 6,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
   })
-  payout: string;
+  payout: number;
 
   @Column()
   currency: string;
