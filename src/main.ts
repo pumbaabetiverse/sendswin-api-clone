@@ -79,3 +79,23 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => console.log(err));
+
+process.on('beforeExit', (code) => {
+  console.log('Process beforeExit event with code: ', code);
+});
+
+process.on('exit', (code) => {
+  console.log('Process exit event with code: ', code);
+});
+
+process.on('uncaughtException', (...args) => {
+  console.log('Uncaught Exception', args);
+});
+
+process.on('unhandledRejection', (...args) => {
+  console.log('Unhandled Rejection', args);
+});
+
+process.on('rejectionHandled', (...args) => {
+  console.log('Rejection Handled', args);
+});
