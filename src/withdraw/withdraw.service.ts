@@ -1,12 +1,13 @@
+import { BlockchainHelperService } from '@/blockchain/blockchain-helper.service';
+import { BlockchainNetwork, BlockchainToken } from '@/common/const';
+import { getTransactionUrl } from '@/common/web3.client';
+import { TelegramService } from '@/telegram/telegram.service';
+import { UsersService } from '@/users/user.service';
+import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
+import { Withdraw, WithdrawStatus } from '@/withdraw/withdraw.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UsersService } from '@/users/user.service';
-import { Withdraw, WithdrawStatus } from '@/withdraw/withdraw.entity';
-import { BlockchainService } from '@/blockchain/blockchain.service';
-import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
-import { BlockchainNetwork, BlockchainToken } from '@/common/const';
-import { TelegramService } from '@/telegram/telegram.service';
 
 @Injectable()
 export class WithdrawService {
@@ -16,7 +17,7 @@ export class WithdrawService {
     @InjectRepository(WalletWithdraw)
     private walletWithdrawRepository: Repository<WalletWithdraw>,
     private usersService: UsersService,
-    private blockchainService: BlockchainService,
+    private readonly blockchainHelperService: BlockchainHelperService,
     private telegramService: TelegramService,
   ) {}
 
@@ -44,7 +45,7 @@ export class WithdrawService {
       wallet.lastUsedAt = new Date();
       await this.walletWithdrawRepository.save(wallet);
 
-      const usdtBalance = await this.blockchainService.getTokenBalance(
+      const usdtBalance = await this.blockchainHelperService.getTokenBalance(
         wallet.address,
         BlockchainToken.USDT,
         BlockchainNetwork.opBNB,
@@ -67,7 +68,7 @@ export class WithdrawService {
         }),
       );
 
-      const receipt = await this.blockchainService.transferToken(
+      const receipt = await this.blockchainHelperService.transferToken(
         wallet.privateKey,
         user.walletAddress,
         BlockchainToken.USDT,
@@ -77,16 +78,15 @@ export class WithdrawService {
 
       if (receipt) {
         withdraw.onChainFee = receipt.gasUsed.toString();
-        withdraw.transactionHash = receipt.hash;
+        withdraw.transactionHash = receipt.transactionHash;
         withdraw.status = WithdrawStatus.SUCCESS;
 
         if (user.chatId) {
-          const scanUrl = `https://opbnbscan.com`;
           await this.telegramService.sendMessage(
             Number(user.chatId),
             `✅ *Withdrawal Successful!*\n\n` +
               `💰 Amount: *${payout} USDT*\n` +
-              `🔗 Transaction Hash: \`${receipt.hash}\`\n\n` +
+              `🔗 Transaction Hash: \`${receipt.transactionHash}\`\n\n` +
               `⏱ Your transaction is being processed and may take a few minutes to be confirmed on the blockchain.`,
             {
               parse_mode: 'Markdown',
@@ -95,7 +95,7 @@ export class WithdrawService {
                   [
                     {
                       text: '🔍 View on OpBNB Scan',
-                      url: `${scanUrl}/tx/${receipt.hash}`,
+                      url: getTransactionUrl(receipt.transactionHash),
                     },
                   ],
                 ],

@@ -1,12 +1,12 @@
 // src/deposits/entities/deposit.entity.ts
 
+import { NumericColumn } from '@/common/transform-decimal';
 import {
   Column,
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ColumnNumericTransformer } from '@/common/ColumnNumericTransformer';
 
 export enum DepositResult {
   WIN = 'win',
@@ -48,21 +48,19 @@ export class Deposit {
   @Column()
   transactionTime: Date;
 
-  @Column({
-    type: 'numeric',
+  @NumericColumn({
+    round: 6,
     precision: 18,
     scale: 6,
     default: 0,
-    transformer: new ColumnNumericTransformer(),
   })
   amount: number;
 
-  @Column({
-    type: 'numeric',
+  @NumericColumn({
+    round: 6,
     precision: 18,
     scale: 6,
     default: 0,
-    transformer: new ColumnNumericTransformer(),
   })
   payout: number;
 

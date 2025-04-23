@@ -1,13 +1,13 @@
 // src/withdraws/entities/withdraw.entity.ts
 
+import { BlockchainNetwork } from '@/common/const';
+import { NumericColumn } from '@/common/transform-decimal';
 import {
   Column,
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { BlockchainNetwork } from '@/common/const';
-import { ColumnNumericTransformer } from '@/common/ColumnNumericTransformer';
 
 export enum WithdrawStatus {
   PENDING = 'pending',
@@ -26,12 +26,11 @@ export class Withdraw {
   @Column()
   userId: number;
 
-  @Column({
-    type: 'numeric',
-    precision: 18,
+  @NumericColumn({
+    round: 6,
     scale: 6,
+    precision: 18,
     default: 0,
-    transformer: new ColumnNumericTransformer(),
   })
   payout: number;
 
