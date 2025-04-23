@@ -12,8 +12,7 @@ export interface EnvironmentVariables {
   DB_SYNCHRONIZE: 'true' | 'false';
   DB_LOGGING: 'true' | 'false';
 
-  REDIS_HOST: string;
-  REDIS_PORT: string;
+  REDIS_URL: string;
   JWT_SECRET: string;
 
   NEST_PASSWORD_SECRET: string;

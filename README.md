@@ -89,8 +89,10 @@ DB_SYNCHRONIZE=false
 DB_LOGGING=false
 
 # Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# For local development:
+REDIS_URL=redis://localhost:6379
+# For production with Upstash or other Redis services:
+# REDIS_URL=redis://default:password@hostname.upstash.io:6379
 
 # Telegram
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token

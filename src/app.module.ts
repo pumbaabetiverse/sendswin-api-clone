@@ -46,12 +46,17 @@ import { EnvironmentVariables } from './common/types';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService<EnvironmentVariables>) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-        },
-      }),
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        if (!redisUrl) {
+          throw new Error('REDIS_URL is not defined');
+        }
+        return {
+          connection: {
+            url: redisUrl,
+          },
+        };
+      },
     }),
 
     TelegrafModule.forRootAsync({
