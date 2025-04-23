@@ -49,7 +49,7 @@ const bsc = defineChain({
 });
 
 export const getChain = (chainName?: string) => {
-  switch (chainName) {
+  switch (chainName?.toUpperCase()) {
     case 'ETH':
       return mainnet;
     case 'TRON':
@@ -120,7 +120,7 @@ export const getTransactionUrl = (chain: string, hash?: string | null) => {
 };
 
 export const getAddressUrl = (chain: string, address?: string | null) => {
-  switch (chain) {
+  switch (chain.toUpperCase()) {
     case 'ETH':
       return `https://etherscan.io/address/${address}`;
     case 'TRON':
@@ -149,7 +149,7 @@ export const getAddressUrl = (chain: string, address?: string | null) => {
 };
 
 export const getTokenUrl = (chain: string, address?: string | null) => {
-  switch (chain) {
+  switch (chain.toUpperCase()) {
     case 'ETH':
       return `https://etherscan.io/token/${address}`;
     case 'TRON':

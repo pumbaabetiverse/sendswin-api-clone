@@ -36,6 +36,7 @@ export class WithdrawService {
     }
 
     const wallets = await this.walletWithdrawRepository.find({
+      select: ['id', 'address', 'privateKey', 'lastUsedAt'],
       order: {
         lastUsedAt: 'ASC',
       },

@@ -1,4 +1,5 @@
 // src/withdraw/wallet-withdraw.entity.ts
+import { Exclude } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
@@ -14,7 +15,10 @@ export class WalletWithdraw {
   @Column()
   address: string;
 
-  @Column()
+  @Column({
+    select: false,
+  })
+  @Exclude()
   privateKey: string;
 
   @Column({ default: new Date() })
