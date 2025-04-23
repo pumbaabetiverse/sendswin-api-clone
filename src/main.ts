@@ -4,13 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { getBotToken } from 'nestjs-telegraf';
 import qs from 'qs';
+import { Telegraf } from 'telegraf';
 import { AppModule } from './app.module';
+import { TimeoutInterceptor } from './common/middlewares/timeout.interceptor';
 import { EnvironmentVariables } from './common/types';
 import { setupSwagger } from './setupSwagger';
-import { TimeoutInterceptor } from './common/middlewares/timeout.interceptor';
-import { getBotToken } from 'nestjs-telegraf';
-import { Telegraf } from 'telegraf';
 
 async function bootstrap() {
   const adapter = new FastifyAdapter({

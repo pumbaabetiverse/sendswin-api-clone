@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { DepositOption } from '@/deposits/deposit.entity';
+import { NumericColumn } from '@/common/transform-decimal';
 
 export enum BinanceAccountStatus {
   ACTIVE = 'active',
@@ -31,8 +32,8 @@ export class BinanceAccount {
   @Column()
   binanceApiSecret: string;
 
-  @Column({
-    type: 'numeric',
+  @NumericColumn({
+    round: 6,
     precision: 18,
     scale: 6,
   })
