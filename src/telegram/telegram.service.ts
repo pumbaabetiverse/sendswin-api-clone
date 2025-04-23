@@ -115,12 +115,21 @@ export class TelegramService {
     }
 
     // Gửi thông báo với các nút
-    await this.bot.telegram.sendMessage(chatId, welcomeMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: buttons,
+    await this.bot.telegram.sendAnimation(
+      chatId,
+      {
+        source: fs.createReadStream(
+          path.join(__dirname, '../../assets/intro.gif'),
+        ),
       },
-    });
+      {
+        caption: welcomeMessage,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: buttons,
+        },
+      },
+    );
   }
 
   async updateWalletAddress(
@@ -218,11 +227,12 @@ export class TelegramService {
     chatId: number,
     ctx: TelegramContext,
   ): Promise<void> {
+    await ctx.editMessageReplyMarkup(undefined);
     // Get user information
     const user = await this.getUserInfo(userId);
 
     if (!user || !user.walletAddress || !user.binanceUsername) {
-      await ctx.editMessageText(
+      await ctx.reply(
         '❌ You need to complete your profile before playing the game.',
         {
           reply_markup: {
@@ -250,13 +260,6 @@ export class TelegramService {
 Good luck! 🍀
       `;
 
-    if (
-      ctx.callbackQuery &&
-      'message' in ctx.callbackQuery &&
-      ctx.callbackQuery.message
-    ) {
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
-    }
     const overAccount = await this.binanceService.getRandomActiveBinanceAccount(
       DepositOption.OVER,
     );
@@ -269,7 +272,7 @@ Good luck! 🍀
     await ctx.sendAnimation(
       {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/demo.mp4'),
+          path.join(__dirname, '../../assets/overunder.gif'),
         ),
       },
       {
@@ -299,6 +302,7 @@ Good luck! 🍀
     userId: string,
     ctx: TelegramContext,
   ): Promise<void> {
+    await ctx.editMessageReplyMarkup(undefined);
     const user = await this.getUserInfo(userId);
 
     if (!user) {
@@ -346,7 +350,7 @@ Good luck! 🍀
     ];
 
     // Edit current message
-    await ctx.editMessageText(completeMessage, {
+    await ctx.reply(completeMessage, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: buttons,
@@ -358,6 +362,7 @@ Good luck! 🍀
     userId: string,
     ctx: TelegramContext,
   ): Promise<void> {
+    await ctx.editMessageReplyMarkup(undefined);
     const user = await this.getUserInfo(userId);
 
     if (!user) {
@@ -402,7 +407,7 @@ Good luck! 🍀
     ]);
 
     // Edit current message
-    await ctx.editMessageText(binanceInfo, {
+    await ctx.reply(binanceInfo, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: buttons,
@@ -632,7 +637,7 @@ Good luck! 🍀
           )
           .join('\n\n');
 
-        await ctx.editMessageText(
+        await ctx.reply(
           `📊 *Your History* (latest 10 entries):\n\n${historyMessage}`,
           {
             parse_mode: 'Markdown',
@@ -649,22 +654,19 @@ Good luck! 🍀
           },
         );
       } else {
-        await ctx.editMessageText(
-          '📊 *Your History*\n\nYou have no history yet.',
-          {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🔙 Back to Main Menu',
-                    callback_data: 'back_to_menu',
-                  },
-                ],
+        await ctx.reply('📊 *Your History*\n\nYou have no history yet.', {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🔙 Back to Main Menu',
+                  callback_data: 'back_to_menu',
+                },
               ],
-            },
+            ],
           },
-        );
+        });
       }
     }
   }
@@ -694,11 +696,12 @@ Good luck! 🍀
     chatId: number,
     ctx: TelegramContext,
   ): Promise<void> {
+    await ctx.editMessageReplyMarkup(undefined);
     // Get user information
     const user = await this.getUserInfo(userId);
 
     if (!user || !user.walletAddress || !user.binanceUsername) {
-      await ctx.editMessageText(
+      await ctx.reply(
         '❌ You need to complete your profile before playing the game.',
         {
           reply_markup: {
@@ -726,14 +729,6 @@ Good luck! 🍀
 Good luck! 🍀
       `;
 
-    if (
-      ctx.callbackQuery &&
-      'message' in ctx.callbackQuery &&
-      ctx.callbackQuery.message
-    ) {
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
-    }
-
     const luckyAccount =
       await this.binanceService.getRandomActiveBinanceAccount(
         DepositOption.LUCKY_NUMBER,
@@ -743,7 +738,7 @@ Good luck! 🍀
     await ctx.sendAnimation(
       {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/demo.mp4'),
+          path.join(__dirname, '../../assets/golden7.gif'),
         ),
       },
       {
@@ -771,6 +766,7 @@ Good luck! 🍀
     chatId: number,
     ctx: TelegramContext,
   ): Promise<void> {
+    await ctx.editMessageReplyMarkup(undefined);
     // Get user information
     const user = await this.getUserInfo(userId);
 
@@ -858,36 +854,20 @@ Good luck! 🍀
       ]);
     }
 
-    if (
-      ctx.callbackQuery &&
-      'message' in ctx.callbackQuery &&
-      ctx.callbackQuery.message
-    ) {
-      // Edit or send new message based on context
-      try {
-        await ctx.editMessageText(welcomeMessage, {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: buttons,
-          },
-        });
-      } catch {
-        // If editing fails, send a new message
-        await ctx.reply(welcomeMessage, {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: buttons,
-          },
-        });
-      }
-    } else {
-      // If no existing message, send a new one
-      await ctx.reply(welcomeMessage, {
+    // If no existing message, send a new one
+    await ctx.sendAnimation(
+      {
+        source: fs.createReadStream(
+          path.join(__dirname, '../../assets/intro.gif'),
+        ),
+      },
+      {
+        caption: welcomeMessage,
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: buttons,
         },
-      });
-    }
+      },
+    );
   }
 }
