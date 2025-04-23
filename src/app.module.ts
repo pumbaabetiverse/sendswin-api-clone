@@ -54,6 +54,7 @@ import { EnvironmentVariables } from './common/types';
         return {
           connection: {
             url: redisUrl,
+            tls: redisUrl.includes('localhost') ? undefined : {},
           },
         };
       },
