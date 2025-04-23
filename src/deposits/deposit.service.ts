@@ -1,0 +1,309 @@
+// src/deposits/deposits.service.ts
+
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  Deposit,
+  DepositOption,
+  DepositResult,
+} from '@/deposits/deposit.entity';
+import { UsersService } from '@/users/user.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
+import { DepositProcessQueueDto } from '@/deposits/deposit.dto';
+import { BinanceService } from '@/binance/binance.service';
+import { SettingService } from '@/setting/setting.service';
+import { SettingKey } from '@/common/const';
+import { TelegramService } from '@/telegram/telegram.service';
+
+@Injectable()
+export class DepositsService {
+  private readonly logger = new Logger(DepositsService.name);
+
+  constructor(
+    @InjectRepository(Deposit)
+    private depositsRepository: Repository<Deposit>,
+    private usersService: UsersService,
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService: TelegramService,
+    private binanceService: BinanceService,
+    private settingService: SettingService,
+    @InjectQueue('withdraw')
+    private withdrawQueue: Queue<WithdrawRequestQueueDto>,
+    @InjectQueue('deposit-process')
+    private depositProcessQueue: Queue<DepositProcessQueueDto>,
+  ) {}
+
+  async getUserHistory(userId: number) {
+    return this.depositsRepository.find({
+      where: {
+        userId: userId,
+      },
+      order: {
+        transactionTime: 'DESC',
+      },
+      take: 10,
+    });
+  }
+
+  async processPayTradeHistory(): Promise<void> {
+    try {
+      const accounts = await this.binanceService.getActiveBinanceAccounts();
+      let newDepositsCount = 0;
+      for (const account of accounts) {
+        const data = await this.binanceService.getPayTradeHistory(account);
+
+        for (const item of data) {
+          try {
+            // console.log(item.payerInfo);
+            const amount = parseFloat(item.amount);
+            // Check if this is a C2C transaction, with amount between 10 and 50, and currency is USDT
+            if (
+              item.orderType === 'C2C' &&
+              item.currency === 'USDT' &&
+              amount >= 0
+            ) {
+              // Check if a deposit with this orderId already exists
+              const existingDeposit = await this.depositsRepository.findOneBy({
+                orderId: item.orderId,
+              });
+
+              if (!existingDeposit) {
+                // Add to deposit process queue
+                await this.depositProcessQueue.add(
+                  'process-deposit',
+                  {
+                    item,
+                    account,
+                  },
+                  {
+                    removeOnComplete: true,
+                    removeOnFail: true,
+                  },
+                );
+                newDepositsCount++;
+              }
+            }
+          } catch (error) {
+            this.logger.error(
+              `Error processing pay trade history: ${error.message}`,
+              error.stack,
+            );
+          }
+        }
+      }
+
+      if (newDepositsCount > 0) {
+        this.logger.log(`Added ${newDepositsCount} new deposits`);
+      } else {
+        this.logger.log('No new qualifying deposits found');
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing pay trade history: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  async determineOUResult(
+    option: DepositOption,
+    transactionId: string,
+  ): Promise<DepositResult> {
+    if (!transactionId) {
+      return DepositResult.VOID;
+    }
+
+    // Get the last character of the transaction ID
+    const sumDigit =
+      (parseInt(transactionId.charAt(transactionId.length - 1), 10) +
+        parseInt(transactionId.charAt(transactionId.length - 2), 10) +
+        parseInt(transactionId.charAt(transactionId.length - 3), 10)) %
+      10;
+
+    // Check if sum digit is a number
+    if (isNaN(sumDigit)) {
+      this.logger.warn(
+        `Last character of transactionId is not a digit: ${transactionId}`,
+      );
+      return DepositResult.VOID;
+    }
+
+    // Determine if the last digit is odd or even
+    const isOver = sumDigit >= 5;
+
+    const isUnder = sumDigit < 5;
+
+    // Determine if the user wins based on their option and the outcome
+    if (option == DepositOption.OVER && isOver) {
+      return DepositResult.WIN;
+    } else if (option === DepositOption.UNDER && isUnder) {
+      return DepositResult.WIN;
+    } else {
+      return DepositResult.LOSE;
+    }
+  }
+
+  async determineLuckyNumberResult(
+    transactionId: string,
+  ): Promise<DepositResult> {
+    if (!transactionId) {
+      return DepositResult.VOID;
+    }
+    if (transactionId.endsWith('7')) {
+      return DepositResult.WIN;
+    } else {
+      return DepositResult.LOSE;
+    }
+  }
+
+  async processDepositItem(data: DepositProcessQueueDto): Promise<void> {
+    try {
+      const { item, account } = data;
+      const amount = parseFloat(item.amount);
+
+      const existingDeposit = await this.depositsRepository.findOneBy({
+        orderId: item.orderId,
+      });
+
+      if (existingDeposit) {
+        this.logger.log(
+          `Deposit with orderId ${item.orderId} already exists, skipping processing`,
+        );
+        return;
+      }
+
+      // Create new deposit
+      const deposit = new Deposit();
+      deposit.uid = item.uid;
+      deposit.counterpartyId = item.counterpartyId;
+      deposit.orderId = item.orderId;
+      deposit.note = item.note;
+      deposit.orderType = item.orderType;
+      deposit.transactionId = item.transactionId;
+      deposit.transactionTime = new Date(item.transactionTime);
+      deposit.amount = item.amount;
+      deposit.currency = item.currency;
+      deposit.walletType = item.walletType;
+      deposit.totalPaymentFee = item.totalPaymentFee;
+      deposit.option = account.option;
+
+      if (!item.payerInfo?.name) {
+        await this.depositsRepository.save(deposit);
+        return;
+      }
+
+      if (item.note.length > 0) {
+        await this.usersService.updateBinanceUsernameByLinkKey(
+          item.note,
+          item.payerInfo.name,
+        );
+      }
+
+      const user = await this.usersService.findByBinanceUsername(
+        item.payerInfo.name,
+      );
+
+      if (!user) {
+        deposit.result = DepositResult.VOID;
+        await this.depositsRepository.save(deposit);
+        return;
+      }
+
+      deposit.userId = user.id;
+
+      if (!user.walletAddress) {
+        deposit.result = DepositResult.VOID;
+        await this.depositsRepository.save(deposit);
+        return;
+      }
+
+      if (
+        account.option === DepositOption.OVER ||
+        account.option === DepositOption.UNDER
+      ) {
+        const minAmount = await this.settingService.getFloatSetting(
+          SettingKey.OVER_UNDER_MIN_AMOUNT,
+          0.5,
+        );
+        const maxAmount = await this.settingService.getFloatSetting(
+          SettingKey.OVER_UNDER_MAX_AMOUNT,
+          50,
+        );
+
+        if (amount >= minAmount && amount <= maxAmount) {
+          deposit.result = await this.determineOUResult(
+            account.option,
+            item.orderId,
+          );
+        } else {
+          deposit.result = DepositResult.VOID;
+        }
+
+        if (deposit.result == DepositResult.WIN) {
+          const multiplier = await this.settingService.getFloatSetting(
+            SettingKey.OVER_UNDER_MULTIPLIER,
+            1.95,
+          );
+          const payout = parseFloat(item.amount) * multiplier;
+          deposit.payout = payout.toFixed(6);
+        }
+      } else if (account.option == DepositOption.LUCKY_NUMBER) {
+        const minAmount = await this.settingService.getFloatSetting(
+          SettingKey.LUCKY_NUMBER_MIN_AMOUNT,
+          0.5,
+        );
+        const maxAmount = await this.settingService.getFloatSetting(
+          SettingKey.LUCKY_NUMBER_MAX_AMOUNT,
+          10,
+        );
+
+        if (amount >= minAmount && amount <= maxAmount) {
+          deposit.result = await this.determineLuckyNumberResult(item.orderId);
+        } else {
+          deposit.result = DepositResult.VOID;
+        }
+
+        if (deposit.result == DepositResult.WIN) {
+          const multiplier = await this.settingService.getFloatSetting(
+            SettingKey.LUCKY_NUMBER_MULTIPLIER,
+            300,
+          );
+          const payout = parseFloat(item.amount) * multiplier;
+          deposit.payout = payout.toFixed(6);
+        }
+      }
+
+      await this.depositsRepository.save(deposit);
+
+      if (user.chatId) {
+        await this.telegramService.sendNewGameResultMessage(
+          Number(user.chatId),
+          deposit,
+        );
+      }
+
+      if (deposit.result == DepositResult.WIN) {
+        await this.withdrawQueue.add(
+          'withdraw',
+          {
+            userId: user.id,
+            payout: parseFloat(deposit.payout),
+            depositOrderId: deposit.orderId,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing deposit item: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+}

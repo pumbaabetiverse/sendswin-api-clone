@@ -1,0 +1,23 @@
+// src/deposits/deposits.scheduler.ts
+
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
+import { DepositsService } from '@/deposits/deposit.service';
+import { SettingService } from '@/setting/setting.service';
+
+@Injectable()
+export class DepositsScheduler {
+  private readonly logger = new Logger(DepositsScheduler.name);
+
+  constructor(
+    private readonly depositsService: DepositsService,
+    private readonly settingService: SettingService,
+  ) {}
+
+  // Run every 30 seconds
+  @Cron('*/30 * * * * *')
+  async fetchPayTradeHistory() {
+    this.logger.debug('Running scheduled task to fetch pay trade history');
+    await this.depositsService.processPayTradeHistory();
+  }
+}
