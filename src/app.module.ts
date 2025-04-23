@@ -81,7 +81,8 @@ import { HealthModule } from './health/health.module';
             ? {
                 webhook: {
                   domain: publicDomain,
-                  path: '/api/v1/tele-webhook',
+                  path: '/tele-webhook',
+                  secretToken: configService.get('TELEGRAM_BOT_SECRET_TOKEN'),
                 },
               }
             : undefined,

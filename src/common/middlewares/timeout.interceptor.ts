@@ -14,6 +14,9 @@ export class TimeoutInterceptor implements NestInterceptor {
   private readonly ssePaths: string[] = ['/sse']; // Danh sách SSE paths
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    if (context.getType() !== 'http') {
+      return next.handle();
+    }
     const request = context.switchToHttp().getRequest<AppRequest>();
     const timeoutValue = this.getTimeout(request);
 
@@ -32,7 +35,7 @@ export class TimeoutInterceptor implements NestInterceptor {
     );
   }
   getTimeout(req: AppRequest) {
-    const timeoutValue = +(req.headers['x-timeout'] ?? req.query.timeout ?? 0);
+    const timeoutValue = +(req.headers['x-timeout'] ?? req.query?.timeout ?? 0);
     if (isNaN(timeoutValue) || timeoutValue <= 0) {
       return 15 * 1000;
     }
