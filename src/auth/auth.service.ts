@@ -11,7 +11,6 @@ export class AuthService {
   ) {}
 
   async loginAdmin(options: AdminLoginPayloadDto) {
-    console.log('loginAdmin', options);
     const user = await this.adminUserService.verify(options);
     return this.authSignService.genAdminToken(user.id);
   }
