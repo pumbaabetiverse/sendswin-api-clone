@@ -32,6 +32,7 @@
     "@nestjs/jwt": "11.0.0",
     "@nestjs/platform-fastify": "11.0.21",
     "@nestjs/schedule": "^6.0.0",
+    "@nestjs/terminus": "11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@telegraf/session": "2.0.0-beta.7",
     "argon2": "0.41.1",

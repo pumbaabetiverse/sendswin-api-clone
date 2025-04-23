@@ -9,6 +9,8 @@ import { AppModule } from './app.module';
 import { EnvironmentVariables } from './common/types';
 import { setupSwagger } from './setupSwagger';
 import { TimeoutInterceptor } from './common/middlewares/timeout.interceptor';
+import { getBotToken } from 'nestjs-telegraf';
+import { Telegraf } from 'telegraf';
 
 async function bootstrap() {
   const adapter = new FastifyAdapter({
@@ -57,6 +59,15 @@ async function bootstrap() {
 
   const configService =
     app.get<ConfigService<EnvironmentVariables>>(ConfigService);
+  const publicDomain = configService.get('NEST_PUBLIC_DOMAIN', {
+    infer: true,
+  });
+
+  if (publicDomain) {
+    const bot = app.get<Telegraf>(getBotToken());
+    app.use(bot.webhookCallback('/tele-webhook'));
+  }
+
   if (
     configService.get('NEST_ENABLE_OPENAPI_DOC', { infer: true }) === 'true'
   ) {

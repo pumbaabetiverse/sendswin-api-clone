@@ -19,6 +19,8 @@ export interface EnvironmentVariables {
   TELEGRAM_BOT_TOKEN: string;
 
   NEST_ENABLE_OPENAPI_DOC: 'true' | 'false';
+
+  NEST_PUBLIC_DOMAIN: string;
 }
 
 export type RawRequest = FastifyRequest['raw'] &

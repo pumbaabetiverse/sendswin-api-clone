@@ -17,6 +17,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { EnvironmentVariables } from './common/types';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -70,12 +71,24 @@ import { EnvironmentVariables } from './common/types';
         if (!token) {
           throw new Error('TELEGRAM_BOT_TOKEN is not defined');
         }
+        const publicDomain = configService.get('NEST_PUBLIC_DOMAIN', {
+          infer: true,
+        });
         return {
           token,
           middlewares: [session()],
+          launchOptions: publicDomain
+            ? {
+                webhook: {
+                  domain: publicDomain,
+                  path: '/tele-webhook',
+                },
+              }
+            : undefined,
         };
       },
     }),
+    HealthModule,
     TelegramModule,
     UsersModule,
     DepositsModule,
