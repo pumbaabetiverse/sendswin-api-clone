@@ -1,16 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { SettingService } from '@/setting/setting.service';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
-import { Contract, ethers, TransactionReceipt, TransactionResponse, Wallet } from 'ethers';
+import {
+  Contract,
+  ethers,
+  TransactionReceipt,
+  TransactionResponse,
+  Wallet,
+} from 'ethers';
 
 @Injectable()
 export class BlockchainService {
-  constructor(
-    private readonly settingService: SettingService,
-  ) {
-  }
+  constructor(private readonly settingService: SettingService) {}
 
-  async getTokenBalance(walletAddress: string, token: BlockchainToken, network: BlockchainNetwork): Promise<number> {
+  async getTokenBalance(
+    walletAddress: string,
+    token: BlockchainToken,
+    network: BlockchainNetwork,
+  ): Promise<number> {
     if (token == BlockchainToken.USDT) {
       const contract = await this.createTokenContract(token, network);
       const balance = await contract.balanceOf(walletAddress);
@@ -33,18 +40,30 @@ export class BlockchainService {
     }
 
     throw new Error('Unsupported token');
-
   }
 
-  async transferToken(privateKey: string, toAddress: string, token: BlockchainToken, network: BlockchainNetwork, amount: number): Promise<TransactionReceipt | null> {
+  async transferToken(
+    privateKey: string,
+    toAddress: string,
+    token: BlockchainToken,
+    network: BlockchainNetwork,
+    amount: number,
+  ): Promise<TransactionReceipt | null> {
     if (token == BlockchainToken.USDT) {
-      const contract = await this.createTokenContract(token, network, privateKey);
+      const contract = await this.createTokenContract(
+        token,
+        network,
+        privateKey,
+      );
       const decimals = await contract.decimals();
 
       // Convert amount to token units with proper decimals
       const amountInTokenUnits = ethers.parseUnits(amount.toString(), decimals);
 
-      const tx: TransactionResponse = await contract.transfer(toAddress, amountInTokenUnits);
+      const tx: TransactionResponse = await contract.transfer(
+        toAddress,
+        amountInTokenUnits,
+      );
 
       return await tx.wait();
     }
@@ -67,7 +86,10 @@ export class BlockchainService {
     throw new Error('Unsupported token');
   }
 
-  async createWallet(network: BlockchainNetwork, privateKey: string): Promise<Wallet> {
+  async createWallet(
+    network: BlockchainNetwork,
+    privateKey: string,
+  ): Promise<Wallet> {
     // Get the network RPC URL
     const rpcUrl = await this.getNetworkRPCUrl(network);
 
@@ -77,7 +99,11 @@ export class BlockchainService {
     return new ethers.Wallet(privateKey, provider);
   }
 
-  async createTokenContract(token: BlockchainToken, network: BlockchainNetwork, privateKey?: string): Promise<Contract> {
+  async createTokenContract(
+    token: BlockchainToken,
+    network: BlockchainNetwork,
+    privateKey?: string,
+  ): Promise<Contract> {
     // Get the network RPC URL
     const rpcUrl = await this.getNetworkRPCUrl(network);
 
@@ -101,7 +127,10 @@ export class BlockchainService {
     }
   }
 
-  async getTokenAddress(token: BlockchainToken, network: BlockchainNetwork): Promise<string> {
+  async getTokenAddress(
+    token: BlockchainToken,
+    network: BlockchainNetwork,
+  ): Promise<string> {
     if (token != BlockchainToken.USDT) {
       throw new Error('Only USDT token is supported');
     }

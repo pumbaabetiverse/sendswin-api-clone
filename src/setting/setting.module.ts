@@ -8,5 +8,4 @@ import { SettingService } from '@/setting/setting.service';
   providers: [SettingService],
   exports: [SettingService],
 })
-export class SettingModule {
-}
+export class SettingModule {}

@@ -29,11 +29,10 @@ export interface PayTradeHistoryResponse {
     walletType: number;
     totalPaymentFee: string;
     payerInfo?: {
-      name: string
-    }
+      name: string;
+    };
   }[];
 }
-
 
 /**
  * Client chính cho Binance API
@@ -56,13 +55,24 @@ export class BinanceClient {
     });
   }
 
-  async getPayTradeHistory(limit: number = 100): Promise<PayTradeHistoryResponse> {
-    return this.signedRequest<PayTradeHistoryResponse>('GET', '/sapi/v1/pay/transactions', {
-      limit,
-    });
+  async getPayTradeHistory(
+    limit: number = 100,
+  ): Promise<PayTradeHistoryResponse> {
+    return this.signedRequest<PayTradeHistoryResponse>(
+      'GET',
+      '/sapi/v1/pay/transactions',
+      {
+        limit,
+      },
+    );
   }
 
-  async withdraw(coin: string, address: string, network: string, amount: number) {
+  async withdraw(
+    coin: string,
+    address: string,
+    network: string,
+    amount: number,
+  ) {
     return this.signedRequest('POST', '/sapi/v1/capital/withdraw/apply', {
       coin,
       address,
@@ -99,7 +109,7 @@ export class BinanceClient {
 
     // Tạo query string
     const queryString = Object.keys(requestParams)
-      .map(key => `${key}=${encodeURIComponent(requestParams[key])}`)
+      .map((key) => `${key}=${encodeURIComponent(requestParams[key])}`)
       .join('&');
 
     // Tạo chữ ký
@@ -114,11 +124,12 @@ export class BinanceClient {
         },
       });
 
-
       return response.data as T;
     } catch (error: any) {
       if (error.response) {
-        throw new Error(`Binance API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+        throw new Error(
+          `Binance API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+        );
       }
       throw error;
     }

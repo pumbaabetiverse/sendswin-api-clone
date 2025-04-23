@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.2",
+    "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -30,6 +31,7 @@
     "@telegraf/session": "2.0.0-beta.7",
     "axios": "^1.8.4",
     "bullmq": "^5.49.1",
+    "cache-manager": "^6.4.2",
     "dotenv": "^16.5.0",
     "ethers": "^6.13.5",
     "nestjs-telegraf": "^2.8.1",

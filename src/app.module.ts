@@ -13,11 +13,16 @@ import { WithdrawModule } from '@/withdraw/withdraw.module';
 import { BlockchainModule } from '@/blockchain/blockchain.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 5 * 60 * 1000, // 5 minutes in milliseconds
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
