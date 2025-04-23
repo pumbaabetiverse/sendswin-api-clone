@@ -136,7 +136,7 @@ export class BlockchainHelperService {
 
     let settingKey: SettingKey;
     switch (network) {
-      case BlockchainNetwork.opBNB:
+      case BlockchainNetwork.OPBNB:
         settingKey = SettingKey.USDT_ADDRESS_OPBNB_NETWORK;
         break;
 
