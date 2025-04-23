@@ -242,10 +242,10 @@ export class TelegramService {
     // Prepare game instructions
     const instructions = `
 🎮 *Over Under Game*:
-  
+
 💰 Betting amount: 0.5-50 USDT
 💎 Win multiplier: 1.95x your bet
-  
+
 Good luck! 🍀
       `;
 
@@ -360,44 +360,42 @@ Good luck! 🍀
       return;
     }
 
-    // Binance account guide
-    const binanceGuide = `
-  🔗 *BINANCE ACCOUNT*
-
-  📱 *How to connect your Binance account:*
-  1️⃣ Open the Binance app
-  2️⃣ Go to the "Profile" tab
-  3️⃣ Find your Binance username
-  4️⃣ It's usually something like "user123456"
-
-  ⚠️ Important: Make sure to enter your correct Binance username!
-  `;
+    // Get an active Binance account for QR code URL
+    const activeAccounts = await this.binanceService.getActiveBinanceAccounts();
+    const activeAccount = activeAccounts.length > 0 ? activeAccounts[0] : null;
 
     // Current Binance info
-    let currentBinanceInfo: string;
+    let binanceInfo = `🔗 *BINANCE ACCOUNT*\n\n`;
+
     if (user.binanceUsername) {
-      currentBinanceInfo = `\n*Your current Binance username:*\n\`${user.binanceUsername}\`\n`;
+      binanceInfo += `*Your current Binance username:*\n\`${user.binanceUsername}\`\n\n`;
     } else {
-      currentBinanceInfo =
-        '\n*You have not connected a Binance account yet.*\n';
+      binanceInfo += `*You have not connected a Binance account yet.*\n\n`;
     }
 
-    // Combine information
-    const completeMessage = binanceGuide + currentBinanceInfo;
+    // Add transaction note (binanceLinkKey)
+    binanceInfo += `*Transaction Note:*\n\`${user.binanceLinkKey}\`\n`;
 
     // Prepare interaction buttons
-    const buttons: InlineKeyboardButton[][] = [
-      [
+    const buttons: InlineKeyboardButton[][] = [];
+
+    // Add Link Binance account button if we have an active account
+    if (activeAccount) {
+      buttons.push([
         {
-          text: '✏️ Update Binance Username',
-          callback_data: 'update_binance_request',
+          text: '🔗 Link Binance Account',
+          url: activeAccount.binanceQrCodeUrl,
         },
-      ],
-      [{ text: '🔙 Back to Main Menu', callback_data: 'back_to_menu' }],
-    ];
+      ]);
+    }
+
+    // Add back to menu button
+    buttons.push([
+      { text: '🔙 Back to Main Menu', callback_data: 'back_to_menu' },
+    ]);
 
     // Edit current message
-    await ctx.editMessageText(completeMessage, {
+    await ctx.editMessageText(binanceInfo, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: buttons,
