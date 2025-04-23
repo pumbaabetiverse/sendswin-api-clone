@@ -125,7 +125,6 @@ export class TelegramService {
   async updateWalletAddress(
     telegramId: string,
     walletAddress: string,
-    chatId: number,
   ): Promise<User | null> {
     return await this.usersService.updateWalletAddress(
       telegramId,
@@ -148,7 +147,6 @@ export class TelegramService {
   async updateBinanceUsername(
     telegramId: string,
     binanceUsername: string,
-    chatId: number,
   ): Promise<User | null> {
     return await this.usersService.updateBinanceUsername(
       telegramId,
@@ -322,7 +320,7 @@ Good luck! 🍀
   `;
 
     // Current wallet info
-    let currentWalletInfo = '';
+    let currentWalletInfo: string;
     if (user.walletAddress) {
       currentWalletInfo = `\n*Your current wallet address:*\n\`${user.walletAddress}\`\n`;
     } else {
@@ -376,7 +374,7 @@ Good luck! 🍀
   `;
 
     // Current Binance info
-    let currentBinanceInfo = '';
+    let currentBinanceInfo: string;
     if (user.binanceUsername) {
       currentBinanceInfo = `\n*Your current Binance username:*\n\`${user.binanceUsername}\`\n`;
     } else {
@@ -472,11 +470,7 @@ Good luck! 🍀
       }
 
       // Update wallet address
-      const result = await this.updateWalletAddress(
-        telegramId,
-        walletAddress,
-        ctx.chat!.id,
-      );
+      const result = await this.updateWalletAddress(telegramId, walletAddress);
 
       if (result) {
         // Show successful update message
@@ -555,7 +549,6 @@ Good luck! 🍀
       const result = await this.updateBinanceUsername(
         telegramId,
         binanceUsername,
-        ctx.chat!.id,
       );
 
       if (result) {
@@ -862,8 +855,6 @@ Good luck! 🍀
       'message' in ctx.callbackQuery &&
       ctx.callbackQuery.message
     ) {
-      const message = ctx.callbackQuery.message;
-
       // Edit or send new message based on context
       try {
         await ctx.editMessageText(welcomeMessage, {

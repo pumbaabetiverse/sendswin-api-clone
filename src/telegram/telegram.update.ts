@@ -1,8 +1,6 @@
 import { Action, Ctx, Message, On, Start, Update } from 'nestjs-telegraf';
 import { Context, Scenes } from 'telegraf';
 import { TelegramService } from '@/telegram/telegram.service';
-import { DepositsService } from '@/deposits/deposit.service';
-import { SettingService } from '@/setting/setting.service';
 
 interface TelegramSession extends Scenes.SceneSession<Scenes.SceneSessionData> {
   waitingWalletFrom?: string;
@@ -18,11 +16,7 @@ interface TelegramContext extends Context {
 
 @Update()
 export class TelegramUpdate {
-  constructor(
-    private readonly telegramService: TelegramService,
-    private readonly depositService: DepositsService,
-    private readonly settingService: SettingService,
-  ) {}
+  constructor(private readonly telegramService: TelegramService) {}
 
   @Start()
   async startCommand(@Ctx() ctx: TelegramContext) {

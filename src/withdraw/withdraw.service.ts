@@ -1,9 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { BinanceClient } from '@/binance/binance-client';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '@/users/user.service';
-import { ConfigService } from '@nestjs/config';
 import { Withdraw, WithdrawStatus } from '@/withdraw/withdraw.entity';
 import { BlockchainService } from '@/blockchain/blockchain.service';
 import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
@@ -12,9 +10,6 @@ import { TelegramService } from '@/telegram/telegram.service';
 
 @Injectable()
 export class WithdrawService {
-  private readonly logger = new Logger(WithdrawService.name);
-  private readonly binanceClient: BinanceClient;
-
   constructor(
     @InjectRepository(Withdraw)
     private withdrawRepository: Repository<Withdraw>,
@@ -23,13 +18,7 @@ export class WithdrawService {
     private usersService: UsersService,
     private blockchainService: BlockchainService,
     private telegramService: TelegramService,
-    configService: ConfigService,
-  ) {
-    this.binanceClient = new BinanceClient({
-      apiKey: configService.get<string>('BINANCE_API_KEY', ''),
-      apiSecret: configService.get<string>('BINANCE_SECRET_KEY', ''),
-    });
-  }
+  ) {}
 
   async processWithdrawOnChain(
     userId: number,
@@ -86,37 +75,37 @@ export class WithdrawService {
         payout,
       );
 
-      // if (receipt) {
-      //   withdraw.onChainFee = receipt.gasUsed.toString();
-      //   withdraw.transactionHash = receipt.hash;
-      //   withdraw.status = WithdrawStatus.SUCCESS;
-      //
-      //   if (user.chatId) {
-      //     const scanUrl = `https://opbnbscan.com`;
-      //     await this.telegramService.sendMessage(
-      //       Number(user.chatId),
-      //       `✅ *Withdrawal Successful!*\n\n` +
-      //         `💰 Amount: *${payout} USDT*\n` +
-      //         `🔗 Transaction Hash: \`${receipt.hash}\`\n\n` +
-      //         `⏱ Your transaction is being processed and may take a few minutes to be confirmed on the blockchain.`,
-      //       {
-      //         parse_mode: 'Markdown',
-      //         reply_markup: {
-      //           inline_keyboard: [
-      //             [
-      //               {
-      //                 text: '🔍 View on OpBNB Scan',
-      //                 url: `${scanUrl}/tx/${receipt.hash}`,
-      //               },
-      //             ],
-      //           ],
-      //         },
-      //       },
-      //     );
-      //   }
-      // } else {
-      //   withdraw.status = WithdrawStatus.FAIL;
-      // }
+      if (receipt) {
+        withdraw.onChainFee = receipt.gasUsed.toString();
+        withdraw.transactionHash = receipt.hash;
+        withdraw.status = WithdrawStatus.SUCCESS;
+
+        if (user.chatId) {
+          const scanUrl = `https://opbnbscan.com`;
+          await this.telegramService.sendMessage(
+            Number(user.chatId),
+            `✅ *Withdrawal Successful!*\n\n` +
+              `💰 Amount: *${payout} USDT*\n` +
+              `🔗 Transaction Hash: \`${receipt.hash}\`\n\n` +
+              `⏱ Your transaction is being processed and may take a few minutes to be confirmed on the blockchain.`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🔍 View on OpBNB Scan',
+                      url: `${scanUrl}/tx/${receipt.hash}`,
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+        }
+      } else {
+        withdraw.status = WithdrawStatus.FAIL;
+      }
 
       await this.withdrawRepository.save(withdraw);
 

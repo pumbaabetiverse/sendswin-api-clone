@@ -3,16 +3,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DepositsService } from '@/deposits/deposit.service';
-import { SettingService } from '@/setting/setting.service';
 
 @Injectable()
 export class DepositsScheduler {
   private readonly logger = new Logger(DepositsScheduler.name);
 
-  constructor(
-    private readonly depositsService: DepositsService,
-    private readonly settingService: SettingService,
-  ) {}
+  constructor(private readonly depositsService: DepositsService) {}
 
   // Run every 30 seconds
   @Cron('*/30 * * * * *')
