@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { SettingService } from '@/setting/setting.service';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import {
+  BigNumberish,
   Contract,
   ethers,
+  Numeric,
   TransactionReceipt,
   TransactionResponse,
   Wallet,
@@ -20,8 +22,8 @@ export class BlockchainService {
   ): Promise<number> {
     if (token == BlockchainToken.USDT) {
       const contract = await this.createTokenContract(token, network);
-      const balance = Number(await contract.balanceOf(walletAddress));
-      const decimals = Number(await contract.decimals());
+      const balance = (await contract.balanceOf(walletAddress)) as BigNumberish;
+      const decimals = (await contract.decimals()) as Numeric;
 
       // Convert the balance from token units to a human-readable number
       return parseFloat(ethers.formatUnits(balance, decimals));
@@ -55,7 +57,7 @@ export class BlockchainService {
         network,
         privateKey,
       );
-      const decimals = Number(await contract.decimals());
+      const decimals = (await contract.decimals()) as Numeric;
 
       // Convert amount to token units with proper decimals
       const amountInTokenUnits = ethers.parseUnits(amount.toString(), decimals);
