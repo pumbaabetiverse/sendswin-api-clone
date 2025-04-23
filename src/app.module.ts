@@ -14,6 +14,9 @@ import { BlockchainModule } from '@/blockchain/blockchain.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { AdminModule } from './admin/admin.module';
+import { AuthModule } from './auth/auth.module';
+import { EnvironmentVariables } from './common/types';
 
 @Module({
   imports: [
@@ -28,22 +31,22 @@ import { CacheModule } from '@nestjs/cache-manager';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => ({
         type: 'postgres',
         host: configService.get('DB_HOST', 'localhost'),
         port: configService.get('DB_PORT', 5432),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'password'),
-        database: configService.get<string>('DB_DATABASE', 'postgres'),
-        synchronize: configService.get('DB_SYNCHRONIZE', false),
-        logging: configService.get('DB_LOGGING', false),
+        username: configService.get('DB_USERNAME', 'postgres', { infer: true }),
+        password: configService.get('DB_PASSWORD', 'password', { infer: true }),
+        database: configService.get('DB_DATABASE', 'postgres'),
+        synchronize: configService.get('DB_SYNCHRONIZE', { infer: true }),
+        logging: configService.get('DB_LOGGING', false, { infer: true }),
         autoLoadEntities: true,
       }),
     }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => ({
         connection: {
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
@@ -54,8 +57,10 @@ import { CacheModule } from '@nestjs/cache-manager';
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const token = configService.get<string>('TELEGRAM_BOT_TOKEN');
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const token = configService.get('TELEGRAM_BOT_TOKEN', {
+          infer: true,
+        });
         if (!token) {
           throw new Error('TELEGRAM_BOT_TOKEN is not defined');
         }
@@ -71,6 +76,8 @@ import { CacheModule } from '@nestjs/cache-manager';
     WithdrawModule,
     BlockchainModule,
     BinanceModule,
+    AdminModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

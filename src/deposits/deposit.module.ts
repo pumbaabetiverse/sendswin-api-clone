@@ -10,8 +10,11 @@ import { TelegramModule } from '@/telegram/telegram.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
 import { SettingModule } from '@/setting/setting.module';
+import { AdminDepositController } from './controllers/admin.deposit.controller';
+import { AdminDepositService } from './services/admin.deposit.service';
 
 @Module({
+  controllers: [AdminDepositController],
   imports: [
     TypeOrmModule.forFeature([Deposit]),
     UsersModule,
@@ -25,7 +28,12 @@ import { SettingModule } from '@/setting/setting.module';
       name: 'deposit-process',
     }),
   ],
-  providers: [DepositsService, DepositsScheduler, DepositConsumer],
+  providers: [
+    DepositsService,
+    DepositsScheduler,
+    DepositConsumer,
+    AdminDepositService,
+  ],
   exports: [DepositsService],
 })
 export class DepositsModule {}
