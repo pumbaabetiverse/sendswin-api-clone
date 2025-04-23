@@ -87,10 +87,12 @@ export class DepositsService {
               }
             }
           } catch (error) {
-            this.logger.error(
-              `Error processing pay trade history: ${error.message}`,
-              error.stack,
-            );
+            if (error instanceof Error) {
+              this.logger.error(
+                `Error processing pay trade history: ${error.message}`,
+                error.stack,
+              );
+            }
           }
         }
       }
@@ -101,17 +103,19 @@ export class DepositsService {
         this.logger.log('No new qualifying deposits found');
       }
     } catch (error) {
-      this.logger.error(
-        `Error processing pay trade history: ${error.message}`,
-        error.stack,
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          `Error processing pay trade history: ${error.message}`,
+          error.stack,
+        );
+      }
     }
   }
 
-  async determineOUResult(
+  determineOUResult(
     option: DepositOption,
     transactionId: string,
-  ): Promise<DepositResult> {
+  ): DepositResult {
     if (!transactionId) {
       return DepositResult.VOID;
     }
@@ -146,9 +150,7 @@ export class DepositsService {
     }
   }
 
-  async determineLuckyNumberResult(
-    transactionId: string,
-  ): Promise<DepositResult> {
+  determineLuckyNumberResult(transactionId: string): DepositResult {
     if (!transactionId) {
       return DepositResult.VOID;
     }
@@ -234,10 +236,7 @@ export class DepositsService {
         );
 
         if (amount >= minAmount && amount <= maxAmount) {
-          deposit.result = await this.determineOUResult(
-            account.option,
-            item.orderId,
-          );
+          deposit.result = this.determineOUResult(account.option, item.orderId);
         } else {
           deposit.result = DepositResult.VOID;
         }
@@ -260,7 +259,7 @@ export class DepositsService {
         );
 
         if (amount >= minAmount && amount <= maxAmount) {
-          deposit.result = await this.determineLuckyNumberResult(item.orderId);
+          deposit.result = this.determineLuckyNumberResult(item.orderId);
         } else {
           deposit.result = DepositResult.VOID;
         }
@@ -298,10 +297,12 @@ export class DepositsService {
         );
       }
     } catch (error) {
-      this.logger.error(
-        `Error processing deposit item: ${error.message}`,
-        error.stack,
-      );
+      if (error instanceof Error) {
+        this.logger.error(
+          `Error processing deposit item: ${error.message}`,
+          error.stack,
+        );
+      }
     }
   }
 }

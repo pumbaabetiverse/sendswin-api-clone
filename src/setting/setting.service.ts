@@ -46,7 +46,7 @@ export class SettingService {
 
   async setSetting(key: SettingKey, value: string) {
     const setting = await this.settingsRepository.findOneBy({ key });
-    let savedSetting;
+    let savedSetting: Setting;
 
     if (setting) {
       setting.value = value;

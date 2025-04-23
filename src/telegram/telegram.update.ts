@@ -2,15 +2,14 @@ import { Action, Ctx, Message, On, Start, Update } from 'nestjs-telegraf';
 import { Context, Scenes } from 'telegraf';
 import { TelegramService } from '@/telegram/telegram.service';
 
-interface TelegramSession extends Scenes.SceneSession<Scenes.SceneSessionData> {
+export interface TelegramSession
+  extends Scenes.SceneSession<Scenes.SceneSessionData> {
   waitingWalletFrom?: string;
   waitingBinanceFrom?: string;
 }
 
-interface TelegramContext extends Context {
-  scene: Scenes.SceneContextScene<TelegramContext> & {
-    state: {};
-  };
+export interface TelegramContext extends Context {
+  scene: Scenes.SceneContextScene<TelegramContext>;
   session: TelegramSession;
 }
 

@@ -16,6 +16,7 @@ import { InlineKeyboardButton } from 'telegraf/typings/core/types/typegram';
 import * as path from 'node:path';
 import { DepositsService } from '@/deposits/deposit.service';
 import { BinanceService } from '@/binance/binance.service';
+import { TelegramContext, TelegramSession } from '@/telegram/telegram.update';
 
 @Injectable()
 export class TelegramService {
@@ -75,7 +76,7 @@ export class TelegramService {
     }
 
     // Tạo các nút tương tác
-    const buttons: any[][] = [];
+    const buttons: InlineKeyboardButton[][] = [];
 
     // Nếu tài khoản đã đầy đủ thông tin, hiển thị nút Play Game và View History trước
     if (user.walletAddress && user.binanceUsername) {
@@ -215,7 +216,7 @@ export class TelegramService {
   async handlePlayGameAction(
     userId: string,
     chatId: number,
-    ctx: any,
+    ctx: TelegramContext,
   ): Promise<void> {
     // Get user information
     const user = await this.getUserInfo(userId);
@@ -294,7 +295,10 @@ Good luck! 🍀
     );
   }
 
-  async handleConnectWalletAction(userId: string, ctx: any): Promise<void> {
+  async handleConnectWalletAction(
+    userId: string,
+    ctx: TelegramContext,
+  ): Promise<void> {
     const user = await this.getUserInfo(userId);
 
     if (!user) {
@@ -350,7 +354,10 @@ Good luck! 🍀
     });
   }
 
-  async handleConnectBinanceAction(userId: string, ctx: any): Promise<void> {
+  async handleConnectBinanceAction(
+    userId: string,
+    ctx: TelegramContext,
+  ): Promise<void> {
     const user = await this.getUserInfo(userId);
 
     if (!user) {
@@ -403,7 +410,7 @@ Good luck! 🍀
     });
   }
 
-  async handleUpdateBinanceRequest(ctx: any): Promise<void> {
+  async handleUpdateBinanceRequest(ctx: TelegramContext): Promise<void> {
     // Send message requesting Binance username with force_reply
     await ctx.reply(
       '🔗 *Please enter your Binance username:*\n\nIt\'s usually something like "user123456"',
@@ -417,7 +424,7 @@ Good luck! 🍀
     );
   }
 
-  async handleUpdateWalletRequest(ctx: any): Promise<void> {
+  async handleUpdateWalletRequest(ctx: TelegramContext): Promise<void> {
     // Send message requesting wallet address with force_reply
     await ctx.reply(
       '💼 *Please enter your wallet address:*\n\nEnter a valid BEP20 address starting with "0x"',
@@ -432,9 +439,9 @@ Good luck! 🍀
   }
 
   async handleTextMessage(
-    ctx: any,
+    ctx: TelegramContext,
     messageText: string,
-    session: any,
+    session: TelegramSession,
   ): Promise<void> {
     // Handle wallet address update
     if (
@@ -592,7 +599,10 @@ Good luck! 🍀
     }
   }
 
-  async handleViewHistoryAction(telegramId: string, ctx: any): Promise<void> {
+  async handleViewHistoryAction(
+    telegramId: string,
+    ctx: TelegramContext,
+  ): Promise<void> {
     // Remove button to prevent multiple clicks
     await ctx.editMessageReplyMarkup(undefined);
 
@@ -606,8 +616,8 @@ Good luck! 🍀
     }
 
     // Fetch user history
-    // const history = await this.depositService.getUserHistory(user.id);
-    const history: Deposit[] = [];
+    const history = await this.depositService.getUserHistory(user.id);
+    // const history: Deposit[] = [];
     // Edit current message
     if (
       ctx.callbackQuery &&
@@ -618,7 +628,7 @@ Good luck! 🍀
         const historyMessage = history
           .map(
             (item, index) =>
-              `${index + 1}. Order ID: ${item.orderId}\n   Option: ${item.option ?? 'invalid'}\n   Amount: ${item.amount}\n   Result: ${item.result}\n   Transaction Time: ${item.transactionTime}`,
+              `${index + 1}. Order ID: ${item.orderId}\n   Option: ${item.option ?? 'invalid'}\n   Amount: ${item.amount}\n   Result: ${item.result}\n   Transaction Time: ${item.transactionTime.toLocaleString()}`,
           )
           .join('\n\n');
 
@@ -659,7 +669,7 @@ Good luck! 🍀
     }
   }
 
-  async handleIncompleteProfileAction(ctx: any): Promise<void> {
+  async handleIncompleteProfileAction(ctx: TelegramContext): Promise<void> {
     if (
       ctx.callbackQuery &&
       'message' in ctx.callbackQuery &&
@@ -682,7 +692,7 @@ Good luck! 🍀
   async handlePlayLuckyNumberAction(
     userId: string,
     chatId: number,
-    ctx: any,
+    ctx: TelegramContext,
   ): Promise<void> {
     // Get user information
     const user = await this.getUserInfo(userId);
@@ -759,7 +769,7 @@ Good luck! 🍀
     userId: string,
     fullName: string,
     chatId: number,
-    ctx: any,
+    ctx: TelegramContext,
   ): Promise<void> {
     // Get user information
     const user = await this.getUserInfo(userId);
@@ -861,7 +871,7 @@ Good luck! 🍀
             inline_keyboard: buttons,
           },
         });
-      } catch (error) {
+      } catch {
         // If editing fails, send a new message
         await ctx.reply(welcomeMessage, {
           parse_mode: 'Markdown',

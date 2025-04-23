@@ -66,7 +66,9 @@ export class BinanceService {
       const response = await binanceClient.getPayTradeHistory(50);
       return response.data;
     } catch (error) {
-      this.logger.error(error.message, error.stack);
+      if (error instanceof Error) {
+        this.logger.error(error.message, error.stack);
+      }
       return [];
     }
   }

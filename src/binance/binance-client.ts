@@ -1,6 +1,6 @@
 // binance-client.ts
 
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as crypto from 'crypto';
 
 /**
@@ -102,7 +102,7 @@ export class BinanceClient {
   ): Promise<T> {
     // Thêm timestamp
     const timestamp = Date.now();
-    const requestParams = {
+    const requestParams: Record<string, string | number | boolean> = {
       ...params,
       timestamp,
     };
@@ -125,8 +125,8 @@ export class BinanceClient {
       });
 
       return response.data as T;
-    } catch (error: any) {
-      if (error.response) {
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) {
         throw new Error(
           `Binance API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
         );

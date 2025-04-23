@@ -20,8 +20,8 @@ export class BlockchainService {
   ): Promise<number> {
     if (token == BlockchainToken.USDT) {
       const contract = await this.createTokenContract(token, network);
-      const balance = await contract.balanceOf(walletAddress);
-      const decimals = await contract.decimals();
+      const balance = Number(await contract.balanceOf(walletAddress));
+      const decimals = Number(await contract.decimals());
 
       // Convert the balance from token units to a human-readable number
       return parseFloat(ethers.formatUnits(balance, decimals));
@@ -55,15 +55,15 @@ export class BlockchainService {
         network,
         privateKey,
       );
-      const decimals = await contract.decimals();
+      const decimals = Number(await contract.decimals());
 
       // Convert amount to token units with proper decimals
       const amountInTokenUnits = ethers.parseUnits(amount.toString(), decimals);
 
-      const tx: TransactionResponse = await contract.transfer(
+      const tx = (await contract.transfer(
         toAddress,
         amountInTokenUnits,
-      );
+      )) as TransactionResponse;
 
       return await tx.wait();
     }
