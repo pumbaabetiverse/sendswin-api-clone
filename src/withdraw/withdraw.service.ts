@@ -48,7 +48,7 @@ export class WithdrawService {
       const usdtBalance = await this.blockchainHelperService.getTokenBalance(
         wallet.address,
         BlockchainToken.USDT,
-        BlockchainNetwork.opBNB,
+        BlockchainNetwork.OPBNB,
       );
 
       if (usdtBalance < payout) {
@@ -64,7 +64,7 @@ export class WithdrawService {
           depositOrderId,
           status: WithdrawStatus.PENDING,
           fromWalletId: wallet.id,
-          network: BlockchainNetwork.opBNB,
+          network: BlockchainNetwork.OPBNB,
         }),
       );
 
@@ -72,7 +72,7 @@ export class WithdrawService {
         wallet.privateKey,
         user.walletAddress,
         BlockchainToken.USDT,
-        BlockchainNetwork.opBNB,
+        BlockchainNetwork.OPBNB,
         payout,
       );
 

@@ -1,6 +1,6 @@
 export enum BlockchainNetwork {
   BSC = 'BSC',
-  opBNB = 'opBNB',
+  OPBNB = 'OPBNB',
 }
 
 export enum BlockchainToken {
