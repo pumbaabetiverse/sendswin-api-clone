@@ -81,7 +81,7 @@ import { HealthModule } from './health/health.module';
             ? {
                 webhook: {
                   domain: publicDomain,
-                  path: '/tele-webhook',
+                  path: '/api/v1/tele-webhook',
                 },
               }
             : undefined,
