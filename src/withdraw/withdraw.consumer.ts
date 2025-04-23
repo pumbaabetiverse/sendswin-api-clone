@@ -10,10 +10,14 @@ export class WithdrawConsumer extends WorkerHost {
   }
 
   async process(job: Job<WithdrawRequestQueueDto, any, string>): Promise<any> {
-    await this.withdrawService.processWithdrawOnChain(
-      job.data.userId,
-      job.data.payout,
-      job.data.depositOrderId,
-    );
+    try {
+      await this.withdrawService.processWithdrawOnChain(
+        job.data.userId,
+        job.data.payout,
+        job.data.depositOrderId,
+      );
+    } catch (err) {
+      console.log(err);
+    }
   }
 }

@@ -95,7 +95,10 @@ export class WithdrawService {
                   [
                     {
                       text: '🔍 View on OpBNB Scan',
-                      url: getTransactionUrl(receipt.transactionHash),
+                      url: getTransactionUrl(
+                        BlockchainNetwork.OPBNB,
+                        receipt.transactionHash,
+                      ),
                     },
                   ],
                 ],

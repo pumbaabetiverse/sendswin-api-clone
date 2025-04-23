@@ -1,4 +1,3 @@
-import type { Hex } from 'viem';
 import {
   createPublicClient,
   createWalletClient,
@@ -10,10 +9,10 @@ import { privateKeyToAccount } from 'viem/accounts';
 import {
   bscTestnet,
   mainnet,
+  opBNB,
   polygon,
   polygonAmoy,
   tron,
-  opBNB,
 } from 'viem/chains';
 
 const bsc = defineChain({
@@ -82,7 +81,7 @@ export function getPublicClient(chainName?: string) {
 }
 
 export function getWalletClient(privateKey: string, chainName?: string) {
-  const account = privateKeyToAccount(privateKey as Hex);
+  const account = privateKeyToAccount(`0x${privateKey}`);
   const chain = getChain(chainName);
   return createWalletClient({
     account,
