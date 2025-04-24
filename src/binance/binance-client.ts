@@ -2,6 +2,7 @@
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as crypto from 'crypto';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 /**
  * Cấu hình client Binance
@@ -10,6 +11,7 @@ export interface BinanceConfig {
   apiKey: string;
   apiSecret: string;
   baseUrl?: string;
+  proxy: string; // Format: url:port:username:pass (mandatory)
 }
 
 export interface PayTradeHistoryResponse {
@@ -47,11 +49,22 @@ export class BinanceClient {
       ...config,
     };
 
+    const [url, port, username, password] = this.config.proxy.split(':');
+    if (!url || !port || !username || !password) {
+      throw new Error(
+        'Invalid proxy format. Expected format: url:port:username:pass',
+      );
+    }
+
+    const proxyUrl = `http://${username}:${password}@${url}:${port}`;
+    const httpsAgent = new HttpsProxyAgent(proxyUrl);
+
     this.client = axios.create({
       baseURL: this.config.baseUrl,
       headers: {
         'X-MBX-APIKEY': this.config.apiKey,
       },
+      httpsAgent,
     });
   }
 

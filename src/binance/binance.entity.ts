@@ -51,6 +51,9 @@ export class BinanceAccount {
   })
   status: BinanceAccountStatus;
 
+  @Column({ default: '' })
+  proxy: string; // Mandatory proxy configuration for Binance API
+
   @CreateDateColumn()
   createdAt: Date;
 }

@@ -61,6 +61,7 @@ export class BinanceService {
       const binanceClient = new BinanceClient({
         apiKey: account.binanceApiKey,
         apiSecret: account.binanceApiSecret,
+        proxy: account.proxy,
       });
 
       const response = await binanceClient.getPayTradeHistory(50);
