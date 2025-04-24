@@ -1,28 +1,28 @@
 // src/deposits/deposits.service.ts
 
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  Deposit,
-  DepositOption,
-  DepositResult,
-} from '@/deposits/deposit.entity';
-import { UsersService } from '@/users/user.service';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
-import { DepositProcessQueueDto } from '@/deposits/deposit.dto';
 import { BinanceService } from '@/binance/binance.service';
-import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
-import { TelegramService } from '@/telegram/telegram.service';
 import {
   buildPaginateResponse,
   PaginationQuery,
   PaginationResponse,
 } from '@/common/dto/pagination.dto';
 import { composePagination } from '@/common/pagination';
+import { DepositProcessQueueDto } from '@/deposits/deposit.dto';
+import {
+  Deposit,
+  DepositOption,
+  DepositResult,
+} from '@/deposits/deposit.entity';
+import { SettingService } from '@/setting/setting.service';
+import { TelegramService } from '@/telegram/telegram.service';
+import { UsersService } from '@/users/user.service';
+import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Queue } from 'bullmq';
+import { FindOptionsWhere, Repository } from 'typeorm';
 
 @Injectable()
 export class DepositsService {
@@ -42,15 +42,13 @@ export class DepositsService {
     private depositProcessQueue: Queue<DepositProcessQueueDto>,
   ) {}
 
-  async userHistoryPagination(
-    userId: number,
+  async historyPagination(
+    options: FindOptionsWhere<Deposit> | FindOptionsWhere<Deposit>[],
     pagination: PaginationQuery,
   ): Promise<PaginationResponse<Deposit>> {
     const { limit, skip, page } = composePagination(pagination);
     const [items, total] = await this.depositsRepository.findAndCount({
-      where: {
-        userId: userId,
-      },
+      where: options,
       order: {
         transactionTime: 'DESC',
       },

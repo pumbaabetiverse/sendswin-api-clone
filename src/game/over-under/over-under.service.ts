@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { OverUnderRoundWallet } from './dto/over-under.dto';
 import { DepositsService } from '@/deposits/deposit.service';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
+import { In } from 'typeorm';
 
 @Injectable()
 export class OverUnderService {
@@ -24,6 +25,9 @@ export class OverUnderService {
   }
 
   async getHistory(userId: number, pagination: PaginationQuery) {
-    return this.depositsService.userHistoryPagination(userId, pagination);
+    return this.depositsService.historyPagination(
+      { userId, option: In([DepositOption.OVER, DepositOption.OVER]) },
+      pagination,
+    );
   }
 }
