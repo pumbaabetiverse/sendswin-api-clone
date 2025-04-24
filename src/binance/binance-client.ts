@@ -1,6 +1,6 @@
 // binance-client.ts
 
-import { components } from '@/common/binance-schema.gen';
+import { paths } from '@/common/binance-schema.gen';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -70,13 +70,11 @@ export class BinanceClient {
   }
 
   async getAccountBalanceBySymbol(symbol: string) {
-    const result = await this.signedRequest<components['schemas']['account']>(
-      'GET',
-      '/api/v3/account',
-    );
-    return result.balances.find(
-      (v) => v.asset.toLowerCase() === symbol.toLowerCase(),
-    )?.free;
+    const result = await this.signedRequest<
+      paths['/sapi/v1/asset/get-funding-asset']['post']['responses']['200']['content']['application/json']
+    >('POST', '/sapi/v1/asset/get-funding-asset');
+    return result.find((v) => v.asset.toLowerCase() === symbol.toLowerCase())
+      ?.free;
   }
 
   async getPayTradeHistory(
