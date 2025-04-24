@@ -129,6 +129,7 @@ export class BinanceClient {
     const requestParams: Record<string, string | number | boolean> = {
       ...params,
       timestamp,
+      recvWindow: 30000,
     };
 
     // Tạo query string
