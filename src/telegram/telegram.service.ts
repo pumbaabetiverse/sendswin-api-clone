@@ -51,10 +51,8 @@ export class TelegramService {
       );
 
       // Generate the welcome message and buttons
-      const { welcomeMessage, buttons } = this.generateWelcomeMessageAndButtons(
-        user,
-        fullName,
-      );
+      const { welcomeMessage, buttons } =
+        await this.generateWelcomeMessageAndButtons(user, fullName);
 
       // Send the message with buttons
       await this.bot.telegram.sendVideo(
@@ -771,10 +769,8 @@ Good luck! 🍀
       }
 
       // Generate the welcome message and buttons
-      const { welcomeMessage, buttons } = this.generateWelcomeMessageAndButtons(
-        user,
-        fullName,
-      );
+      const { welcomeMessage, buttons } =
+        await this.generateWelcomeMessageAndButtons(user, fullName);
 
       const introImg = await this.settingService.getSetting(
         SettingKey.TELE_BOT_INTRO_IMAGE,
@@ -806,14 +802,14 @@ Good luck! 🍀
     }
   }
 
-  private generateWelcomeMessageAndButtons(
+  private async generateWelcomeMessageAndButtons(
     user: User,
     fullName: string,
-  ): {
+  ): Promise<{
     welcomeMessage: string;
     buttons: InlineKeyboardButton[][];
     missingInfo: string[];
-  } {
+  }> {
     // Create the welcome message
     let welcomeMessage = `👋 *Welcome, ${fullName}!*\n\n`;
     welcomeMessage += `🆔 User ID: \`${user.id}\`\n`;
@@ -851,9 +847,21 @@ Good luck! 🍀
     // Create interaction buttons
     const buttons: InlineKeyboardButton[][] = [];
 
+    const miniAppUrl = await this.settingService.getSetting(
+      SettingKey.TELE_MINI_APP_URL,
+      'https://sendswin-mini-app.pages.dev',
+    );
+
+    buttons.push([
+      {
+        text: '📱 Open App',
+        web_app: { url: miniAppUrl },
+      },
+    ]);
+
     if (user.walletAddress && user.binanceUsername) {
       buttons.push([
-        { text: '🔼 Over/Under 🔽', callback_data: 'play_game' },
+        { text: '🔺 Over/Under 🔻', callback_data: 'play_game' },
         { text: '🍀 GOLDEN 7️', callback_data: 'play_lucky_number' },
       ]);
       buttons.push([
