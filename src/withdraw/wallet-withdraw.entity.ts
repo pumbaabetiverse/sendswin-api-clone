@@ -6,6 +6,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { NumericColumn } from '@/common/transform-decimal';
 
 @Entity('wallet_withdraws')
 export class WalletWithdraw {
@@ -20,6 +21,14 @@ export class WalletWithdraw {
   })
   @Exclude()
   privateKey: string;
+
+  @NumericColumn({
+    round: 6,
+    scale: 6,
+    precision: 18,
+    default: 0,
+  })
+  balanceUsdtOpBnb: number;
 
   @Column({ default: new Date() })
   lastUsedAt: Date;

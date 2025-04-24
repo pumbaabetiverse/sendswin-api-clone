@@ -43,15 +43,18 @@ export class WithdrawService {
 
     for (const wallet of wallets) {
       wallet.lastUsedAt = new Date();
-      await this.walletWithdrawRepository.save(wallet);
 
       const usdtBalance = await this.blockchainHelperService.getTokenBalance(
         wallet.address,
         BlockchainToken.USDT,
         BlockchainNetwork.OPBNB,
       );
+      if (usdtBalance) {
+        wallet.balanceUsdtOpBnb = usdtBalance;
+      }
+      await this.walletWithdrawRepository.save(wallet);
 
-      if (usdtBalance < payout) {
+      if (!usdtBalance || usdtBalance < payout) {
         continue;
       }
 
