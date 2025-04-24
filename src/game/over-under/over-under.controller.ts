@@ -1,7 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
+import { PaginationQuery } from '@/common/dto/pagination.dto';
+import { ApiOkResponsePagination } from '@/common/dto/response.dto';
+import { Deposit } from '@/deposits/deposit.entity';
+import { Controller, Get, Query } from '@nestjs/common';
 import { OverUnderRoundWallet } from './dto/over-under.dto';
 import { OverUnderService } from './over-under.service';
-import { Authenticated } from '@/common/decorators/common.decorator';
 
 @Controller('game/over-under')
 export class OverUnderController {
@@ -11,5 +14,15 @@ export class OverUnderController {
   @Authenticated()
   getRoundWallet(): Promise<OverUnderRoundWallet> {
     return this.overUnderService.getRoundWallet();
+  }
+
+  @Get('history')
+  @Authenticated()
+  @ApiOkResponsePagination(Deposit)
+  getHistory(
+    @AuthUser('userId') userId: number,
+    @Query() pagination: PaginationQuery,
+  ) {
+    return this.overUnderService.getHistory(userId, pagination);
   }
 }

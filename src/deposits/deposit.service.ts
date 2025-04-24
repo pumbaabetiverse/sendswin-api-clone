@@ -17,6 +17,12 @@ import { BinanceService } from '@/binance/binance.service';
 import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
 import { TelegramService } from '@/telegram/telegram.service';
+import {
+  buildPaginateResponse,
+  PaginationQuery,
+  PaginationResponse,
+} from '@/common/dto/pagination.dto';
+import { composePagination } from '@/common/pagination';
 
 @Injectable()
 export class DepositsService {
@@ -35,6 +41,24 @@ export class DepositsService {
     @InjectQueue('deposit-process')
     private depositProcessQueue: Queue<DepositProcessQueueDto>,
   ) {}
+
+  async userHistoryPagination(
+    userId: number,
+    pagination: PaginationQuery,
+  ): Promise<PaginationResponse<Deposit>> {
+    const { limit, skip, page } = composePagination(pagination);
+    const [items, total] = await this.depositsRepository.findAndCount({
+      where: {
+        userId: userId,
+      },
+      order: {
+        transactionTime: 'DESC',
+      },
+      skip,
+      take: limit,
+    });
+    return buildPaginateResponse(items, total, page, limit);
+  }
 
   async getUserHistory(userId: number) {
     return this.depositsRepository.find({

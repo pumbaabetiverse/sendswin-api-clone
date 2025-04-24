@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { OverUnderController } from './over-under.controller';
 import { BinanceModule } from '@/binance/binance.module';
 import { OverUnderService } from './over-under.service';
+import { DepositsModule } from '@/deposits/deposit.module';
 
 @Module({
-  imports: [BinanceModule],
+  imports: [BinanceModule, DepositsModule],
   controllers: [OverUnderController],
   providers: [OverUnderService],
 })
