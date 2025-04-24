@@ -26,7 +26,7 @@ export class OverUnderService {
 
   async getHistory(userId: number, pagination: PaginationQuery) {
     return this.depositsService.historyPagination(
-      { userId, option: In([DepositOption.OVER, DepositOption.OVER]) },
+      { userId, option: In([DepositOption.OVER, DepositOption.UNDER]) },
       pagination,
     );
   }
