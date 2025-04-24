@@ -9,6 +9,9 @@ import { WalletWithdraw } from '../wallet-withdraw.entity';
   model: {
     type: WalletWithdraw,
   },
+  query: {
+    exclude: ['privateKey'],
+  },
   routes: {
     only: ['getOneBase', 'getManyBase', 'updateOneBase', 'deleteOneBase'],
   },

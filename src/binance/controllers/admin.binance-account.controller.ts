@@ -9,6 +9,9 @@ import { AdminBinanceAccountService } from '../services/admin.binance-account.se
   model: {
     type: BinanceAccount,
   },
+  query: {
+    exclude: ['binanceApiKey', 'binanceApiSecret'],
+  },
   routes: {
     only: [
       'createOneBase',
