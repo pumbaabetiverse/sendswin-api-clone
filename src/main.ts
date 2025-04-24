@@ -66,7 +66,7 @@ async function bootstrap() {
   if (publicDomain) {
     const bot = app.get<Telegraf>(getBotToken());
     app.use(
-      bot.webhookCallback(bot.secretPathComponent(), {
+      bot.webhookCallback('/tele-webhook', {
         secretToken: configService.get('TELEGRAM_BOT_SECRET_TOKEN'),
       }),
     );
