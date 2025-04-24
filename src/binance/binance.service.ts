@@ -5,9 +5,7 @@ import {
 import { BinanceAccount, BinanceAccountStatus } from '@/binance/binance.entity';
 import { DepositOption } from '@/deposits/deposit.entity';
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import Big from 'big.js';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -73,53 +71,6 @@ export class BinanceService {
         this.logger.error(error.message, error.stack);
       }
       return [];
-    }
-  }
-
-  @Cron(CronExpression.EVERY_5_MINUTES, {
-    waitForCompletion: true,
-  })
-  async syncAllBalances() {
-    const items = await this.binanceAccountsRepository.find({
-      select: ['id'],
-      where: {
-        status: BinanceAccountStatus.ACTIVE,
-      },
-    });
-    if (!items.length) return;
-    return Promise.allSettled(
-      items.map((v) => this.#syncBalance(v.id, 'USDT')),
-    );
-  }
-
-  async #syncBalance(accountId: number, symbol: string) {
-    try {
-      const account = await this.binanceAccountsRepository.findOneOrFail({
-        where: {
-          id: accountId,
-        },
-      });
-      const binanceClient = new BinanceClient({
-        apiKey: account.binanceApiKey,
-        apiSecret: account.binanceApiSecret,
-        proxy: account.proxy,
-      });
-
-      const balance = await binanceClient.getAccountBalanceBySymbol(symbol);
-      if (balance && Big(balance).gt(0)) {
-        await this.binanceAccountsRepository.update(
-          {
-            id: account.id,
-          },
-          {
-            usdtBalance: Big(balance).toNumber(),
-          },
-        );
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
     }
   }
 }
