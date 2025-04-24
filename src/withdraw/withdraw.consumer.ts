@@ -4,9 +4,12 @@ import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { WithdrawService } from '@/withdraw/withdraw.service';
 import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
+import { Logger } from '@nestjs/common';
 
 @Processor('withdraw')
 export class WithdrawConsumer extends WorkerHost {
+  private logger = new Logger(WithdrawConsumer.name);
+
   constructor(
     private withdrawService: WithdrawService,
     private settingService: SettingService,
@@ -26,8 +29,10 @@ export class WithdrawConsumer extends WorkerHost {
           job.data.payout,
           job.data.depositOrderId,
         );
-    } catch (err) {
-      console.log(err);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack);
+      }
     }
   }
 }

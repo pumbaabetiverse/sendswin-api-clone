@@ -13,7 +13,13 @@ export class DepositsScheduler {
   // Run every 30 seconds
   @Cron('*/30 * * * * *')
   async fetchPayTradeHistory() {
-    this.logger.debug('Running scheduled task to fetch pay trade history');
-    await this.depositsService.processPayTradeHistory();
+    try {
+      this.logger.debug('Running scheduled task to fetch pay trade history');
+      await this.depositsService.processPayTradeHistory();
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(error.message, error.stack);
+      }
+    }
   }
 }

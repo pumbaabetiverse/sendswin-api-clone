@@ -1,6 +1,5 @@
 import { BlockchainHelperService } from '@/blockchain/blockchain-helper.service';
 import { BlockchainNetwork, BlockchainToken } from '@/common/const';
-import { getTransactionUrl } from '@/common/web3.client';
 import { TelegramService } from '@/telegram/telegram.service';
 import { UsersService } from '@/users/user.service';
 import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
@@ -83,28 +82,11 @@ export class WithdrawService {
         withdraw.status = WithdrawStatus.SUCCESS;
 
         if (user.chatId) {
-          await this.telegramService.sendMessage(
+          await this.telegramService.sendWithdrawalSuccessMessage(
             Number(user.chatId),
-            `✅ *Withdrawal Successful!*\n\n` +
-              `💰 Amount: *${payout} USDT*\n` +
-              `🔗 Transaction Hash: \`${receipt.transactionHash}\`\n\n` +
-              `⏱ Your transaction is being processed and may take a few minutes to be confirmed on the blockchain.`,
-            {
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: '🔍 View on OpBNB Scan',
-                      url: getTransactionUrl(
-                        BlockchainNetwork.OPBNB,
-                        receipt.transactionHash,
-                      ),
-                    },
-                  ],
-                ],
-              },
-            },
+            payout,
+            receipt.transactionHash,
+            BlockchainNetwork.OPBNB,
           );
         }
       } else {

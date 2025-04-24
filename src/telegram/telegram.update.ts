@@ -37,10 +37,9 @@ export class TelegramUpdate {
       return;
     }
 
-    const userId = ctx.from.id.toString();
-    const chatId = ctx.chat.id;
+    const telegramId = ctx.from.id.toString();
 
-    await this.telegramService.handlePlayGameAction(userId, chatId, ctx);
+    await this.telegramService.handlePlayGameAction(telegramId, ctx);
   }
 
   @Action('connect_wallet')
@@ -59,8 +58,8 @@ export class TelegramUpdate {
       return;
     }
 
-    const userId = ctx.from.id.toString();
-    await this.telegramService.handleConnectBinanceAction(userId, ctx);
+    const telegramId = ctx.from.id.toString();
+    await this.telegramService.handleConnectBinanceAction(telegramId, ctx);
   }
 
   @Action('update_binance_request')
@@ -112,10 +111,9 @@ export class TelegramUpdate {
       return;
     }
 
-    const userId = ctx.from.id.toString();
-    const chatId = ctx.chat.id;
+    const telegramId = ctx.from.id.toString();
 
-    await this.telegramService.handlePlayLuckyNumberAction(userId, chatId, ctx);
+    await this.telegramService.handlePlayLuckyNumberAction(telegramId, ctx);
   }
 
   @Action('back_to_menu')
@@ -124,16 +122,14 @@ export class TelegramUpdate {
       return;
     }
 
-    const userId = ctx.from.id.toString();
+    const telegramId = ctx.from.id.toString();
     const firstName = ctx.from.first_name || '';
     const lastName = ctx.from.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
-    const chatId = ctx.chat.id;
 
     await this.telegramService.handleBackToMenuAction(
-      userId,
+      telegramId,
       fullName,
-      chatId,
       ctx,
     );
   }
