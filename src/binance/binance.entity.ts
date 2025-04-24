@@ -6,6 +6,7 @@ import {
 } from 'typeorm';
 import { DepositOption } from '@/deposits/deposit.entity';
 import { NumericColumn } from '@/common/transform-decimal';
+import { Exclude } from 'class-transformer';
 
 export enum BinanceAccountStatus {
   ACTIVE = 'active',
@@ -27,9 +28,11 @@ export class BinanceAccount {
   binanceQrCodeUrl: string;
 
   @Column()
+  @Exclude()
   binanceApiKey: string;
 
   @Column()
+  @Exclude()
   binanceApiSecret: string;
 
   @NumericColumn({
