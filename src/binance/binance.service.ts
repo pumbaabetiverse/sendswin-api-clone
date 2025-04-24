@@ -1,14 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { BinanceAccount, BinanceAccountStatus } from '@/binance/binance.entity';
-import { Repository } from 'typeorm';
 import {
   BinanceClient,
   PayTradeHistoryResponse,
 } from '@/binance/binance-client';
+import { BinanceAccount, BinanceAccountStatus } from '@/binance/binance.entity';
 import { DepositOption } from '@/deposits/deposit.entity';
-import Big from 'big.js';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
+import Big from 'big.js';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class BinanceService {
@@ -76,7 +76,7 @@ export class BinanceService {
     }
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES, {
+  @Cron(CronExpression.EVERY_5_MINUTES, {
     waitForCompletion: true,
   })
   async syncAllBalances() {

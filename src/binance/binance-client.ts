@@ -72,7 +72,7 @@ export class BinanceClient {
   async getAccountBalanceBySymbol(symbol: string) {
     const result = await this.signedRequest<components['schemas']['account']>(
       'GET',
-      '/api/v1/account',
+      '/api/v3/account',
     );
     return result.balances.find(
       (v) => v.asset.toLowerCase() === symbol.toLowerCase(),
