@@ -17,6 +17,7 @@ import * as path from 'node:path';
 import { DepositsService } from '@/deposits/deposit.service';
 import { BinanceService } from '@/binance/binance.service';
 import { TelegramContext, TelegramSession } from '@/telegram/telegram.update';
+import { SettingKey } from '@/common/const';
 
 @Injectable()
 export class TelegramService {
@@ -38,6 +39,11 @@ export class TelegramService {
       telegramId,
       fullName,
       chatId.toString(),
+    );
+
+    const introImg = await this.settingService.getSetting(
+      SettingKey.TELE_BOT_INTRO_IMAGE,
+      '',
     );
 
     // Tạo thông báo chào mừng
@@ -117,9 +123,9 @@ export class TelegramService {
     // Gửi thông báo với các nút
     await this.bot.telegram.sendAnimation(
       chatId,
-      {
+      introImg || {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/intro.gif'),
+          path.join(process.cwd(), 'assets/intro.gif'),
         ),
       },
       {
@@ -231,6 +237,11 @@ export class TelegramService {
     // Get user information
     const user = await this.getUserInfo(userId);
 
+    const bannerImg = await this.settingService.getSetting(
+      SettingKey.TELE_BOT_OVER_UNDER_IMAGE,
+      '',
+    );
+
     if (!user || !user.walletAddress || !user.binanceUsername) {
       await ctx.reply(
         '❌ You need to complete your profile before playing the game.',
@@ -270,9 +281,9 @@ Good luck! 🍀
 
     // Send QR code with game instructions
     await ctx.sendAnimation(
-      {
+      bannerImg || {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/overunder.gif'),
+          path.join(process.cwd(), 'assets/overunder.gif'),
         ),
       },
       {
@@ -729,6 +740,11 @@ Good luck! 🍀
 Good luck! 🍀
       `;
 
+    const bannerImg = await this.settingService.getSetting(
+      SettingKey.TELE_BOT_LUCKY_NUMBER_IMAGE,
+      '',
+    );
+
     const luckyAccount =
       await this.binanceService.getRandomActiveBinanceAccount(
         DepositOption.LUCKY_NUMBER,
@@ -736,9 +752,9 @@ Good luck! 🍀
 
     // Send instructions with play button
     await ctx.sendAnimation(
-      {
+      bannerImg || {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/golden7.gif'),
+          path.join(process.cwd(), 'assets/golden7.gif'),
         ),
       },
       {
@@ -854,11 +870,16 @@ Good luck! 🍀
       ]);
     }
 
+    const introImg = await this.settingService.getSetting(
+      SettingKey.TELE_BOT_INTRO_IMAGE,
+      '',
+    );
+
     // If no existing message, send a new one
     await ctx.sendAnimation(
-      {
+      introImg || {
         source: fs.createReadStream(
-          path.join(__dirname, '../../assets/intro.gif'),
+          path.join(process.cwd(), 'assets/intro.gif'),
         ),
       },
       {
