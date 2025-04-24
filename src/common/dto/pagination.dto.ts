@@ -33,10 +33,6 @@ export const PaginatedDto = <TModel extends Type<any>>(model: TModel) => {
   class PaginatedDtoClass extends PaginationResponse<InstanceType<TModel>> {
     @ApiProperty({ type: [model] })
     @Expose()
-    items: InstanceType<TModel>[];
-
-    @ApiProperty({ type: [model] })
-    @Expose()
     data: InstanceType<TModel>[];
   }
 
