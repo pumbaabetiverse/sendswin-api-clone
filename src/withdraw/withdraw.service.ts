@@ -102,6 +102,21 @@ export class WithdrawService {
     }
   }
 
+  async syncWalletBalances(): Promise<void> {
+    const wallets = await this.walletWithdrawRepository.find({});
+    for (const wallet of wallets) {
+      const usdtBalance = await this.blockchainHelperService.getTokenBalance(
+        wallet.address,
+        BlockchainToken.USDT,
+        BlockchainNetwork.OPBNB,
+      );
+      if (usdtBalance) {
+        wallet.balanceUsdtOpBnb = usdtBalance;
+      }
+    }
+    await this.walletWithdrawRepository.save(wallets);
+  }
+
   // async processWithdrawBinance(userId: number, payout: number, depositOrderId: string): Promise<void> {
   //   const user = await this.usersService.findById(userId);
   //   if (!user?.walletAddress) {

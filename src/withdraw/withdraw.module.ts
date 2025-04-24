@@ -14,6 +14,7 @@ import { AdminWithdrawController } from './controllers/admin.withdraw.controller
 import { AdminWalletWithdrawService } from './services/admin.wallet-withdraw.service';
 import { AdminWalletWithdrawController } from './controllers/admin.wallet-withdraw.controller';
 import { SettingModule } from '@/setting/setting.module';
+import { WalletWithdrawScheduler } from '@/withdraw/wallet-withdraw.scheduler';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { SettingModule } from '@/setting/setting.module';
   providers: [
     WithdrawService,
     WithdrawConsumer,
+    WalletWithdrawScheduler,
     AdminWithdrawService,
     AdminWalletWithdrawService,
   ],
