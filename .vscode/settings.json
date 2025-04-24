@@ -1,0 +1,11 @@
+{
+  "files.watcherExclude": {
+    "**/binance-schema.gen.ts": true
+  },
+  "search.exclude": {
+    "**/binance-schema.gen.ts": true
+  },
+  "files.readonlyInclude": {
+    "**/binance-schema.gen.ts": true
+  }
+}

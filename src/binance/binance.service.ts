@@ -7,6 +7,8 @@ import {
   PayTradeHistoryResponse,
 } from '@/binance/binance-client';
 import { DepositOption } from '@/deposits/deposit.entity';
+import Big from 'big.js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class BinanceService {
@@ -71,6 +73,53 @@ export class BinanceService {
         this.logger.error(error.message, error.stack);
       }
       return [];
+    }
+  }
+
+  @Cron(CronExpression.EVERY_10_MINUTES, {
+    waitForCompletion: true,
+  })
+  async syncAllBalances() {
+    const items = await this.binanceAccountsRepository.find({
+      select: ['id'],
+      where: {
+        status: BinanceAccountStatus.ACTIVE,
+      },
+    });
+    if (!items.length) return;
+    return Promise.allSettled(
+      items.map((v) => this.#syncBalance(v.id, 'USDT')),
+    );
+  }
+
+  async #syncBalance(accountId: number, symbol: string) {
+    try {
+      const account = await this.binanceAccountsRepository.findOneOrFail({
+        where: {
+          id: accountId,
+        },
+      });
+      const binanceClient = new BinanceClient({
+        apiKey: account.binanceApiKey,
+        apiSecret: account.binanceApiSecret,
+        proxy: account.proxy,
+      });
+
+      const balance = await binanceClient.getAccountBalanceBySymbol(symbol);
+      if (balance && Big(balance).gt(0)) {
+        await this.binanceAccountsRepository.update(
+          {
+            id: account.id,
+          },
+          {
+            usdtBalance: Big(balance).toNumber(),
+          },
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(error.message, error.stack);
+      }
     }
   }
 }
