@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { EnvironmentVariables } from './common/types';
 import { HealthModule } from './health/health.module';
+import { GameModule } from './game/game.module';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { HealthModule } from './health/health.module';
     BinanceModule,
     AdminModule,
     AuthModule,
+    GameModule,
   ],
   controllers: [AppController],
   providers: [AppService],
