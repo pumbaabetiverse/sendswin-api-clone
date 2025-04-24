@@ -431,29 +431,6 @@ Good luck! 🍀
     }
   }
 
-  async handleUpdateBinanceRequest(ctx: TelegramContext): Promise<void> {
-    try {
-      // Send a message requesting Binance username with force_reply
-      await ctx.reply(
-        '🔗 *Please enter your Binance username:*\n\nIt\'s usually something like "user123456"',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            force_reply: true,
-            selective: true,
-          },
-        },
-      );
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error in handleUpdateBinanceRequest: ${error.message}`,
-          error.stack,
-        );
-      }
-    }
-  }
-
   async handleUpdateWalletRequest(ctx: TelegramContext): Promise<void> {
     try {
       await ctx.reply(
@@ -558,84 +535,6 @@ Good luck! 🍀
 
         // Clear waiting state
         delete session.waitingWalletFrom;
-      }
-
-      // Handle Binance username update
-      if (
-        session.waitingBinanceFrom &&
-        ctx.from?.id.toString() === session.waitingBinanceFrom
-      ) {
-        const binanceUsername = messageText.trim();
-        const telegramId = ctx.from.id.toString();
-
-        // Validate Binance username format
-        if (binanceUsername.length < 2 || binanceUsername.length > 20) {
-          await ctx.reply(
-            '❌ *Invalid Binance username format*\n\nBinance username should be between 2 and 20 characters.\n\nPlease try again.',
-            {
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: '🔙 Back to Main Menu',
-                      callback_data: 'back_to_menu',
-                    },
-                  ],
-                ],
-              },
-            },
-          );
-          // Clear waiting state
-          delete session.waitingBinanceFrom;
-          return;
-        }
-
-        // Update Binance username
-        const result = await this.usersService.updateBinanceUsername(
-          telegramId,
-          binanceUsername,
-        );
-
-        if (result) {
-          await ctx.reply(
-            `✅ *Binance Username Updated Successfully!*\n\n` +
-              `Your new Binance username:\n\`${binanceUsername}\`\n\n`,
-            {
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: '🔙 Back to Main Menu',
-                      callback_data: 'back_to_menu',
-                    },
-                  ],
-                ],
-              },
-            },
-          );
-        } else {
-          await ctx.reply(
-            '❌ *Error: Could not update your Binance username.*\n\nPlease try again later or contact support.',
-            {
-              parse_mode: 'Markdown',
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: '🔙 Back to Main Menu',
-                      callback_data: 'back_to_menu',
-                    },
-                  ],
-                ],
-              },
-            },
-          );
-        }
-
-        // Clear waiting state
-        delete session.waitingBinanceFrom;
       }
     } catch (error) {
       if (error instanceof Error) {
