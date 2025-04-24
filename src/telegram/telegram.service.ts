@@ -574,16 +574,29 @@ Good luck! 🍀
       ) {
         if (history.length > 0) {
           const historyMessage = history
-            .map(
-              (item, index) =>
-                `${index + 1}. Order ID: ${item.orderId}\n   Option: ${item.option ?? 'invalid'}\n   Amount: ${item.amount}\n   Result: ${item.result}\n   Transaction Time: ${item.transactionTime.toLocaleString()}`,
-            )
+            .map((item, index) => {
+              const resultEmoji =
+                item.result === DepositResult.WIN ? '🎉' : '📉';
+              const resultText =
+                item.result === DepositResult.WIN
+                  ? `<b>${resultEmoji} ${item.result}</b>`
+                  : `${resultEmoji} ${item.result}`;
+
+              return (
+                `<b>📝 ${index + 1}. Transaction #${item.orderId}</b>\n` +
+                `<code>━━━━━━━━━━━━━━━━━━━━━</code>\n` +
+                `<b>Option:</b> <code>${item.option ?? 'invalid'}</code>\n` +
+                `<b>Amount:</b> <code>${item.amount}</code>\n` +
+                `<b>Result:</b> ${resultText}\n` +
+                `<b>Time:</b> <i>${item.transactionTime.toLocaleString()}</i>`
+              );
+            })
             .join('\n\n');
 
           await ctx.reply(
-            `📊 *Your History* (latest 10 entries):\n\n${historyMessage}`,
+            `<b>📊 Your History</b> (latest 10 entries)\n\n${historyMessage}`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: {
                 inline_keyboard: [
                   [
@@ -597,19 +610,22 @@ Good luck! 🍀
             },
           );
         } else {
-          await ctx.reply('📊 *Your History*\n\nYou have no history yet.', {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🔙 Back to Main Menu',
-                    callback_data: 'back_to_menu',
-                  },
+          await ctx.reply(
+            '<b>📊 Your History</b>\n\nYou have no history yet.',
+            {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🔙 Back to Main Menu',
+                      callback_data: 'back_to_menu',
+                    },
+                  ],
                 ],
-              ],
+              },
             },
-          });
+          );
         }
       }
     } catch (error) {
