@@ -121,7 +121,7 @@ export class TelegramService {
     }
 
     // Gửi thông báo với các nút
-    await this.bot.telegram.sendAnimation(
+    await this.bot.telegram.sendVideo(
       chatId,
       introImg || {
         source: fs.createReadStream(
@@ -280,7 +280,7 @@ Good luck! 🍀
       );
 
     // Send QR code with game instructions
-    await ctx.sendAnimation(
+    await ctx.sendVideo(
       bannerImg || {
         source: fs.createReadStream(
           path.join(process.cwd(), 'assets/overunder.gif'),
@@ -751,7 +751,7 @@ Good luck! 🍀
       );
 
     // Send instructions with play button
-    await ctx.sendAnimation(
+    await ctx.sendVideo(
       bannerImg || {
         source: fs.createReadStream(
           path.join(process.cwd(), 'assets/golden7.gif'),
@@ -876,7 +876,7 @@ Good luck! 🍀
     );
 
     // If no existing message, send a new one
-    await ctx.sendAnimation(
+    await ctx.sendVideo(
       introImg || {
         source: fs.createReadStream(
           path.join(process.cwd(), 'assets/intro.gif'),
