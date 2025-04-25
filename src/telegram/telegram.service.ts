@@ -140,6 +140,11 @@ export class TelegramService {
           ? `\n🎉 Congratulations! Your payout of ${deposit.payout} USDT will be processed shortly.\n\n⚠️ *Important*: If you do not receive your payout within 5 minutes, please contact our customer support.`
           : '';
 
+      const supportUrl = await this.settingService.getSetting(
+        SettingKey.TELE_CUSTOMER_SUPPORT_URL,
+        'https://t.me',
+      );
+
       // Send the notification to the user
       await this.sendMessage(chatId, message + extra, {
         reply_markup: {
@@ -147,7 +152,7 @@ export class TelegramService {
             [
               {
                 text: '🧑‍💼 Customer Support',
-                url: 'https://t.me/daniel9291', // Replace it with your actual support contact
+                url: supportUrl, // Replace it with your actual support contact
               },
             ],
           ],
@@ -385,6 +390,14 @@ Good luck! 🍀
       // Current Binance info
       let binanceInfo = `🔗 *BINANCE ACCOUNT*\n\n`;
 
+      binanceInfo += `📱 *How to link your Binance account:*\n`;
+      binanceInfo += `1️⃣ Copy the Transaction Note below\n`;
+      binanceInfo += `2️⃣ Click the "🔗 Link" button to open Binance app\n`;
+      binanceInfo += `3️⃣ Send any amount to the displayed address\n`;
+      binanceInfo += `4️⃣ Paste the Transaction Note in the "Note" field when transferring\n`;
+      binanceInfo += `5️⃣ Complete the transaction and wait for confirmation\n\n`;
+      binanceInfo += `⚠️ *Important:* The Transaction Note must be exact for the system to identify your account\n\n`;
+
       if (user.binanceUsername) {
         binanceInfo += `*Your current Binance username:*\n\`${user.binanceUsername}\`\n\n`;
       } else {
@@ -398,14 +411,12 @@ Good luck! 🍀
       const buttons: InlineKeyboardButton[][] = [];
 
       // Add the Link Binance account button if we have an active account
-      if (activeAccount) {
-        buttons.push([
-          {
-            text: '🔗 Link',
-            url: activeAccount.binanceQrCodeUrl,
-          },
-        ]);
-      }
+      buttons.push([
+        {
+          text: '🔗 Link',
+          url: activeAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
+        },
+      ]);
 
       // Add back to the menu button
       buttons.push([
@@ -859,6 +870,11 @@ Good luck! 🍀
       },
     ]);
 
+    const supportUrl = await this.settingService.getSetting(
+      SettingKey.TELE_CUSTOMER_SUPPORT_URL,
+      'https://t.me',
+    );
+
     if (user.walletAddress && user.binanceUsername) {
       buttons.push([
         { text: '🔺 Over/Under 🔻', callback_data: 'play_game' },
@@ -866,36 +882,25 @@ Good luck! 🍀
       ]);
       buttons.push([
         { text: '📊 View History', callback_data: 'view_history' },
+        { text: '🧑‍💼 Customer Support', url: supportUrl },
       ]);
     }
 
-    // Wallet update or connect button
-    if (user.walletAddress) {
-      buttons.push([
-        { text: '💼 Update Wallet', callback_data: 'connect_wallet' },
-      ]);
-    } else {
-      buttons.push([
-        { text: '💼 Connect Wallet ⚠️', callback_data: 'connect_wallet' },
-      ]);
-    }
+    const walletButtonText =
+      user.walletAddress != null ? '💼 Wallet' : '⚠️ Wallet';
 
-    // Binance update or connect button
-    if (user.binanceUsername) {
-      buttons.push([
-        {
-          text: '🔗 Update Binance Account',
-          callback_data: 'connect_binance',
-        },
-      ]);
-    } else {
-      buttons.push([
-        {
-          text: '🔗 Connect Binance Account ⚠️',
-          callback_data: 'connect_binance',
-        },
-      ]);
-    }
+    const binanceButtonText =
+      user.binanceUsername != null
+        ? '🔗 Binance Account'
+        : '⚠️ Binance Account';
+
+    buttons.push([
+      { text: walletButtonText, callback_data: 'connect_wallet' },
+      {
+        text: binanceButtonText,
+        callback_data: 'connect_binance',
+      },
+    ]);
 
     return { welcomeMessage, buttons, missingInfo };
   }

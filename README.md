@@ -1,8 +1,8 @@
 # Sends.win
 
 A NestJS application that integrates with Binance API to handle cryptocurrency deposits and withdrawals. The application
-uses a Telegram bot as a user interface and includes features for processing transactions, managing user accounts, and
-interacting with blockchain networks.
+uses a Telegram bot as a user interface and includes features for processing transactions, managing user accounts,
+interacting with blockchain networks, and providing gaming functionality.
 
 ## Table of Contents
 
@@ -24,6 +24,12 @@ interacting with blockchain networks.
 - Blockchain interaction (BSC and opBNB networks)
 - User account management
 - Queue management for asynchronous operations
+- Admin dashboard for system management
+- Authentication system
+- Health check endpoints
+- Gaming functionality:
+    - Over/Under game
+    - Lucky Seven game
 
 ## Technologies
 
@@ -37,20 +43,28 @@ interacting with blockchain networks.
 - **HTTP Client**: [Axios](https://axios-http.com/)
 - **Numeric Precision**: [Big.js](https://github.com/MikeMcl/big.js/)
 - **Package Manager**: [pnpm](https://pnpm.io/)
+- **Caching**: NestJS Cache Manager
+- **Scheduling**: NestJS Schedule Module
 
 ## Project Structure
 
 ```
 src/
-├── app.module.ts          # Main application module
-├── binance/               # Binance API integration
-├── blockchain/            # Blockchain interaction
-├── common/                # Shared utilities and constants
-├── deposits/              # Deposit processing
-├── setting/               # Application settings
-├── telegram/              # Telegram bot integration
-├── users/                 # User management
-└── withdraw/              # Withdrawal processing
+├── admin/                # Admin dashboard functionality
+├── app.module.ts         # Main application module
+├── auth/                 # Authentication system
+├── binance/              # Binance API integration
+├── blockchain/           # Blockchain interaction
+├── common/               # Shared utilities and constants
+├── deposits/             # Deposit processing
+├── game/                 # Gaming functionality
+│   ├── lucky-seven/      # Lucky Seven game
+│   └── over-under/       # Over/Under game
+├── health/               # Health check endpoints
+├── setting/              # Application settings
+├── telegram/             # Telegram bot integration
+├── users/                # User management
+└── withdraw/             # Withdrawal processing
 ```
 
 ## Installation
@@ -58,7 +72,7 @@ src/
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd binance-oe-demo1
+   cd sends-win
    ```
 
 2. Install dependencies using pnpm:
@@ -84,7 +98,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
-DB_DATABASE=binance_oe_demo
+DB_DATABASE=sends_win
 DB_SYNCHRONIZE=false
 DB_LOGGING=false
 
@@ -96,6 +110,8 @@ REDIS_URL=redis://localhost:6379
 
 # Telegram
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_BOT_SECRET_TOKEN=your_telegram_bot_secret_token
+NEST_PUBLIC_DOMAIN=your_public_domain  # For webhook setup
 ```
 
 ## Usage
@@ -116,7 +132,13 @@ pnpm start:prod
 ### Telegram Bot
 
 Once the application is running, you can interact with it through the configured Telegram bot. Start a conversation with
-the bot and follow the instructions.
+the bot and follow the instructions to:
+
+1. Connect your wallet
+2. Connect your Binance account
+3. Play games (Over/Under and Lucky Seven)
+4. View transaction history
+5. Manage deposits and withdrawals
 
 ## Development
 
