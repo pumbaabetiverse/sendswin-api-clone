@@ -95,7 +95,9 @@ export class BinanceClient {
     network: string,
     amount: number,
   ) {
-    return this.signedRequest('POST', '/sapi/v1/capital/withdraw/apply', {
+    return this.signedRequest<
+      paths['/sapi/v1/capital/withdraw/apply']['post']['responses']['200']['content']['application/json']
+    >('POST', '/sapi/v1/capital/withdraw/apply', {
       coin,
       address,
       network,
