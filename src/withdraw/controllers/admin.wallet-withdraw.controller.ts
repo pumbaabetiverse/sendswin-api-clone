@@ -14,7 +14,7 @@ import { NoticeResponse } from '@/common/dto/base.dto';
     exclude: ['privateKey'],
   },
   routes: {
-    only: ['getOneBase', 'getManyBase', 'updateOneBase', 'deleteOneBase'],
+    only: ['createOneBase', 'getOneBase', 'getManyBase', 'updateOneBase'],
   },
   validation: {
     transform: true,

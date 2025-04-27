@@ -10,7 +10,7 @@ import { User } from '../user.entity';
     type: User,
   },
   routes: {
-    only: ['getOneBase', 'getManyBase', 'updateOneBase', 'deleteOneBase'],
+    only: ['getOneBase', 'getManyBase', 'updateOneBase'],
   },
   validation: {
     transform: true,

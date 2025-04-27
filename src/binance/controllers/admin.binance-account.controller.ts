@@ -44,13 +44,7 @@ export class ManualWithdrawRequest {
     exclude: ['binanceApiKey', 'binanceApiSecret'],
   },
   routes: {
-    only: [
-      'createOneBase',
-      'getOneBase',
-      'getManyBase',
-      'updateOneBase',
-      'deleteOneBase',
-    ],
+    only: ['createOneBase', 'getOneBase', 'getManyBase', 'updateOneBase'],
   },
   params: {
     id: {
@@ -77,7 +71,8 @@ export class AdminBinanceAccountController
     return { success: true };
   }
 
-  @Post('action/withdraw')
+  @Post('actions/withdraw')
+  @HttpCode(HttpStatus.OK)
   async manualWithdraw(
     @Body() request: ManualWithdrawRequest,
   ): Promise<NoticeResponse> {

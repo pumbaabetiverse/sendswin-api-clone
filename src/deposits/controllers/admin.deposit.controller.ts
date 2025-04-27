@@ -10,13 +10,7 @@ import { AdminDepositService } from '../services/admin.deposit.service';
     type: Deposit,
   },
   routes: {
-    only: [
-      'createOneBase',
-      'getOneBase',
-      'getManyBase',
-      'updateOneBase',
-      'deleteOneBase',
-    ],
+    only: ['createOneBase', 'getOneBase', 'getManyBase'],
   },
   validation: {
     transform: true,

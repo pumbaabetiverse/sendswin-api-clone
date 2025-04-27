@@ -10,7 +10,7 @@ import { Withdraw } from '../withdraw.entity';
     type: Withdraw,
   },
   routes: {
-    only: ['getOneBase', 'getManyBase', 'updateOneBase', 'deleteOneBase'],
+    only: ['getOneBase', 'getManyBase', 'updateOneBase'],
   },
   validation: {
     transform: true,

@@ -19,7 +19,7 @@ export class WalletWithdraw {
   @Column({
     select: false,
   })
-  @Exclude()
+  @Exclude({ toPlainOnly: true })
   privateKey: string;
 
   @NumericColumn({
