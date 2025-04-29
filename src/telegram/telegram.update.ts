@@ -5,6 +5,7 @@ import { TelegramService } from '@/telegram/telegram.service';
 export interface TelegramSession
   extends Scenes.SceneSession<Scenes.SceneSessionData> {
   waitingWalletFrom?: string;
+  waitingBinanceFrom?: string;
 }
 
 export interface TelegramContext extends Context {
@@ -67,6 +68,14 @@ export class TelegramUpdate {
     ctx.session.waitingWalletFrom = ctx.from?.id.toString();
 
     await this.telegramService.handleUpdateWalletRequest(ctx);
+  }
+
+  @Action('update_binance_request')
+  async updateBinanceRequest(@Ctx() ctx: TelegramContext) {
+    // Lưu user ID để sử dụng khi xử lý phản hồi
+    ctx.session.waitingBinanceFrom = ctx.from?.id.toString();
+
+    await this.telegramService.handleUpdateBinanceRequest(ctx);
   }
 
   @On('text')

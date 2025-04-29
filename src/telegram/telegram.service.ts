@@ -381,50 +381,43 @@ Good luck! 🍀
         return;
       }
 
-      // Get an active Binance account for QR code URL
-      const activeAccounts =
-        await this.binanceService.getActiveBinanceAccounts();
-      const activeAccount =
-        activeAccounts.length > 0 ? activeAccounts[0] : null;
+      // Binance username guide
+      const binanceGuide = `
+🔗 *BINANCE ACCOUNT*
+
+📱 *How to link your Binance account:*
+1️⃣ Enter your Binance username
+2️⃣ Make sure it's the exact username from your Binance account
+3️⃣ This username will be used to identify your account for deposits and withdrawals
+
+⚠️ Important: Make sure to enter the correct Binance username!
+`;
 
       // Current Binance info
-      let binanceInfo = `🔗 *BINANCE ACCOUNT*\n\n`;
-
-      binanceInfo += `📱 *How to link your Binance account:*\n`;
-      binanceInfo += `1️⃣ Copy the Transaction Note below\n`;
-      binanceInfo += `2️⃣ Click the "🔗 Link" button to open Binance app\n`;
-      binanceInfo += `3️⃣ Send any amount to the displayed address\n`;
-      binanceInfo += `4️⃣ Paste the Transaction Note in the "Note" field when transferring\n`;
-      binanceInfo += `5️⃣ Complete the transaction and wait for confirmation\n\n`;
-      binanceInfo += `⚠️ *Important:* The Transaction Note must be exact for the system to identify your account\n\n`;
-
+      let currentBinanceInfo: string;
       if (user.binanceUsername) {
-        binanceInfo += `*Your current Binance username:*\n\`${user.binanceUsername}\`\n\n`;
+        currentBinanceInfo = `\n*Your current Binance username:*\n\`${user.binanceUsername}\`\n`;
       } else {
-        binanceInfo += `*You have not connected a Binance account yet.*\n\n`;
+        currentBinanceInfo =
+          '\n*You have not connected a Binance account yet.*\n';
       }
 
-      // Add a transaction note (binanceLinkKey)
-      binanceInfo += `*Transaction Note:*\n\`${user.binanceLinkKey}\`\n`;
+      // Combine information
+      const completeMessage = binanceGuide + currentBinanceInfo;
 
       // Prepare interaction buttons
-      const buttons: InlineKeyboardButton[][] = [];
-
-      // Add the Link Binance account button if we have an active account
-      buttons.push([
-        {
-          text: '🔗 Link',
-          url: activeAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
-        },
-      ]);
-
-      // Add back to the menu button
-      buttons.push([
-        { text: '🔙 Back to Main Menu', callback_data: 'back_to_menu' },
-      ]);
+      const buttons: InlineKeyboardButton[][] = [
+        [
+          {
+            text: '✏️ Update Binance Username',
+            callback_data: 'update_binance_request',
+          },
+        ],
+        [{ text: '🔙 Back to Main Menu', callback_data: 'back_to_menu' }],
+      ];
 
       // Edit current message
-      await ctx.reply(binanceInfo, {
+      await ctx.reply(completeMessage, {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: buttons,
@@ -456,6 +449,28 @@ Good luck! 🍀
       if (error instanceof Error) {
         this.logger.error(
           `Error in handleUpdateWalletRequest: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+  }
+
+  async handleUpdateBinanceRequest(ctx: TelegramContext): Promise<void> {
+    try {
+      await ctx.reply(
+        '🔗 *Please enter your Binance username:*\n\nEnter your exact Binance username',
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            force_reply: true,
+            selective: true,
+          },
+        },
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `Error in handleUpdateBinanceRequest: ${error.message}`,
           error.stack,
         );
       }
@@ -544,6 +559,85 @@ Good luck! 🍀
 
         // Clear waiting state
         delete session.waitingWalletFrom;
+      }
+      // Handle Binance username update
+      else if (
+        session.waitingBinanceFrom &&
+        ctx.from?.id.toString() === session.waitingBinanceFrom
+      ) {
+        const binanceUsername = messageText.trim();
+        const telegramId = ctx.from.id.toString();
+
+        // Check if Binance username is already in use by another user
+        const existingUser =
+          await this.usersService.findByBinanceUsername(binanceUsername);
+        if (existingUser && existingUser.telegramId !== telegramId) {
+          await ctx.reply(
+            '❌ *This Binance username is already in use by another user.*\n\nPlease enter a different Binance username.',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🔙 Back to Main Menu',
+                      callback_data: 'back_to_menu',
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+          // Clear waiting state
+          delete session.waitingBinanceFrom;
+          return;
+        }
+
+        // Update Binance username
+        const result = await this.usersService.updateBinanceUsername(
+          telegramId,
+          binanceUsername,
+        );
+
+        if (result) {
+          await ctx.reply(
+            `✅ *Binance Username Updated Successfully!*\n\n` +
+              `Your new Binance username:\n\`${binanceUsername}\`\n\n`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🔙 Back to Main Menu',
+                      callback_data: 'back_to_menu',
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+        } else {
+          await ctx.reply(
+            '❌ *Error: Could not update your Binance username.*\n\nPlease try again later or contact support.',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🔙 Back to Main Menu',
+                      callback_data: 'back_to_menu',
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+        }
+
+        // Clear waiting state
+        delete session.waitingBinanceFrom;
       }
     } catch (error) {
       if (error instanceof Error) {
