@@ -1,4 +1,3 @@
-import { Exclude, Expose } from 'class-transformer';
 import { Column, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('settings')
@@ -12,9 +11,6 @@ export class Setting {
   @Column({
     nullable: true,
     default: false,
-  })
-  @Expose({
-    groups: ['admin'],
   })
   expose: boolean;
 
