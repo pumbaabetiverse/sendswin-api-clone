@@ -99,6 +99,12 @@ export class UserRefCircleService {
   }
 
   async withdrawCircle(userId: number, circleId: number) {
+    const currentCircleId = this.generateCircleId();
+
+    if (circleId >= currentCircleId) {
+      throw new Error('Cannot withdraw from current or future circles');
+    }
+
     const userRefCircle = await this.userRefCircleRepository.findOne({
       where: { userId, circleId },
     });
