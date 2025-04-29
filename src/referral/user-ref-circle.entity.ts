@@ -16,8 +16,8 @@ export class UserRefCircleEntity {
   @Column()
   userId: number;
 
-  @Column()
-  parentId: number;
+  @Column({ nullable: true })
+  parentId?: number;
 
   @NumericColumn({
     round: 6,
