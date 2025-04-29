@@ -19,6 +19,12 @@ export class User {
   chatId?: string;
 
   @Column({ nullable: true })
+  refCode?: string;
+
+  @Column({ nullable: true })
+  parentId?: number;
+
+  @Column({ nullable: true })
   binanceUsername?: string;
 
   @Column({ default: '' })

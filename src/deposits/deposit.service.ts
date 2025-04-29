@@ -23,6 +23,7 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
+import { UserRefCircleService } from '@/referral/user-ref-circle.service';
 
 @Injectable()
 export class DepositsService {
@@ -40,6 +41,7 @@ export class DepositsService {
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     @InjectQueue('deposit-process')
     private depositProcessQueue: Queue<DepositProcessQueueDto>,
+    private readonly userRefCircleService: UserRefCircleService,
   ) {}
 
   async historyPagination(
@@ -317,7 +319,31 @@ export class DepositsService {
         }
       }
 
-      await this.depositsRepository.save(deposit);
+      const savedDeposit = await this.depositsRepository.save(deposit);
+
+      if (savedDeposit.result != DepositResult.VOID && user.parentId) {
+        let refMultiplier = 0;
+        if (
+          savedDeposit.option == DepositOption.ODD ||
+          savedDeposit.option == DepositOption.EVEN
+        ) {
+          refMultiplier = await this.settingService.getFloatSetting(
+            SettingKey.ODD_EVEN_REF_MULTIPLIER,
+            0.01,
+          );
+        } else if (savedDeposit.option == DepositOption.LUCKY_NUMBER) {
+          refMultiplier = await this.settingService.getFloatSetting(
+            SettingKey.LUCKY_NUMBER_REF_MULTIPLIER,
+            0.3,
+          );
+        }
+        await this.userRefCircleService.addCircleContribution(
+          user.id,
+          user.parentId,
+          deposit.amount * refMultiplier,
+          savedDeposit.createdAt,
+        );
+      }
 
       if (user.chatId) {
         await this.telegramService.sendNewGameResultMessage(

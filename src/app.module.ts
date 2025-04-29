@@ -19,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
 import { EnvironmentVariables } from './common/types';
 import { HealthModule } from './health/health.module';
 import { GameModule } from './game/game.module';
+import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { GameModule } from './game/game.module';
     AdminModule,
     AuthModule,
     GameModule,
+    UserRefCircleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
