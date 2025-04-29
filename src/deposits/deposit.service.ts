@@ -239,10 +239,11 @@ export class DepositsService {
       deposit.option = account.option;
 
       if (!item.payerInfo?.name) {
-        deposit.payerUsername = item.payerInfo?.name;
         await this.depositsRepository.save(deposit);
         return;
       }
+
+      deposit.payerUsername = item.payerInfo.name;
 
       const user = await this.usersService.findByBinanceUsername(
         item.payerInfo.name,
