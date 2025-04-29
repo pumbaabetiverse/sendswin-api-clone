@@ -1,11 +1,21 @@
-import { Body, Controller, Get, Logger, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { UserRefCircleService } from '@/referral/user-ref-circle.service';
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
 import {
-  GetRefCircleResponse,
   WithdrawUserRefCircleRequest,
   WithdrawUserRefCircleResponse,
 } from '@/referral/user-ref-circle.dto';
+import { PaginationQuery } from '@/common/dto/pagination.dto';
+import { ApiOkResponsePagination } from '@/common/dto/response.dto';
+import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 
 @Controller('user-ref-circle')
 export class UserRefCircleController {
@@ -42,23 +52,39 @@ export class UserRefCircleController {
 
   @Get('')
   @Authenticated()
+  @ApiOkResponsePagination(UserRefCircleEntity)
   async getRefCircleInfo(
     @AuthUser('userId') userId: number,
-    @Query('circleIds') circleIds: number[],
-  ): Promise<GetRefCircleResponse> {
-    try {
-      return await this.userRefCircleService.getUserRefCircleAndChildren(
+    @Query() pagination: PaginationQuery,
+  ) {
+    return await this.userRefCircleService.userRefCirclePagination(
+      {
         userId,
-        circleIds,
-      );
-    } catch (err) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
-      }
-      return {
-        childRefCircles: [],
-        userRefCircles: [],
-      };
-    }
+      },
+      pagination,
+      {
+        circleId: 'DESC',
+      },
+    );
+  }
+
+  @Get(':circleId/children')
+  @Authenticated()
+  @ApiOkResponsePagination(UserRefCircleEntity)
+  async getChildrenOfRefCircleInfo(
+    @AuthUser('userId') userId: number,
+    @Param('circleId') circleId: number,
+    @Query() pagination: PaginationQuery,
+  ) {
+    return await this.userRefCircleService.userRefCirclePagination(
+      {
+        parentId: userId,
+        circleId,
+      },
+      pagination,
+      {
+        contributeToParent: 'DESC',
+      },
+    );
   }
 }

@@ -1,7 +1,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { Injectable, Logger } from '@nestjs/common';
-import { In, Repository } from 'typeorm';
+import { FindOptionsOrder, FindOptionsWhere, Repository } from 'typeorm';
 import dayjs from 'dayjs';
 import { UsersService } from '@/users/user.service';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -9,6 +9,12 @@ import { Queue } from 'bullmq';
 import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
+import {
+  buildPaginateResponse,
+  PaginationQuery,
+  PaginationResponse,
+} from '@/common/dto/pagination.dto';
+import { composePagination } from '@/common/pagination';
 
 @Injectable()
 export class UserRefCircleService {
@@ -81,21 +87,21 @@ export class UserRefCircleService {
     }
   }
 
-  async getUserRefCircleAndChildren(userId: number, circleIds: number[]) {
-    const userRefCircles = await this.userRefCircleRepository.findBy({
-      userId,
-      circleId: In(circleIds),
+  async userRefCirclePagination(
+    options:
+      | FindOptionsWhere<UserRefCircleEntity>
+      | FindOptionsWhere<UserRefCircleEntity>[],
+    pagination: PaginationQuery,
+    order: FindOptionsOrder<UserRefCircleEntity>,
+  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+    const { limit, skip, page } = composePagination(pagination);
+    const [items, total] = await this.userRefCircleRepository.findAndCount({
+      where: options,
+      order,
+      skip,
+      take: limit,
     });
-
-    const childRefCircles = await this.userRefCircleRepository.findBy({
-      parentId: userId,
-      circleId: In(circleIds),
-    });
-
-    return {
-      userRefCircles,
-      childRefCircles,
-    };
+    return buildPaginateResponse(items, total, page, limit);
   }
 
   async withdrawCircle(userId: number, circleId: number) {
