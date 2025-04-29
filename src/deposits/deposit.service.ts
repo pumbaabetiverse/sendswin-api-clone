@@ -73,51 +73,76 @@ export class DepositsService {
   async processPayTradeHistory(): Promise<void> {
     try {
       const accounts = await this.binanceService.getActiveBinanceAccounts();
-      let newDepositsCount = 0;
-      for (const account of accounts) {
-        const data = await this.binanceService.getPayTradeHistory(account);
 
-        for (const item of data) {
-          try {
-            // console.log(item.payerInfo);
-            const amount = parseFloat(item.amount);
-            // Check if this is a C2C transaction, with amount between 10 and 50, and the currency is USDT
-            if (
-              item.orderType === 'C2C' &&
-              item.currency === 'USDT' &&
-              amount >= 0
-            ) {
-              // Check if a deposit with this orderId already exists
-              const existingDeposit = await this.depositsRepository.findOneBy({
-                orderId: item.orderId,
-              });
+      // Process all accounts in parallel
+      const processAccountPromises = accounts.map(async (account) => {
+        try {
+          const data = await this.binanceService.getPayTradeHistory(account);
+          let accountDepositsCount = 0;
 
-              if (!existingDeposit) {
-                // Add to the deposit process queue
-                await this.depositProcessQueue.add(
-                  'process-deposit',
+          for (const item of data) {
+            try {
+              // console.log(item.payerInfo);
+              const amount = parseFloat(item.amount);
+              // Check if this is a C2C transaction, with amount between 10 and 50, and the currency is USDT
+              if (
+                item.orderType === 'C2C' &&
+                item.currency === 'USDT' &&
+                amount >= 0
+              ) {
+                // Check if a deposit with this orderId already exists
+                const existingDeposit = await this.depositsRepository.findOneBy(
                   {
-                    item,
-                    account,
-                  },
-                  {
-                    removeOnComplete: true,
-                    removeOnFail: true,
+                    orderId: item.orderId,
                   },
                 );
-                newDepositsCount++;
+
+                if (!existingDeposit) {
+                  // Add to the deposit process queue
+                  await this.depositProcessQueue.add(
+                    'process-deposit',
+                    {
+                      item,
+                      account,
+                    },
+                    {
+                      removeOnComplete: true,
+                      removeOnFail: true,
+                    },
+                  );
+                  accountDepositsCount++;
+                }
+              }
+            } catch (error) {
+              if (error instanceof Error) {
+                this.logger.error(
+                  `Error processing pay trade history item: ${error.message}`,
+                  error.stack,
+                );
               }
             }
-          } catch (error) {
-            if (error instanceof Error) {
-              this.logger.error(
-                `Error processing pay trade history: ${error.message}`,
-                error.stack,
-              );
-            }
           }
+
+          return accountDepositsCount;
+        } catch (error) {
+          if (error instanceof Error) {
+            this.logger.error(
+              `Error processing account ${account.binanceUsername}: ${error.message}`,
+              error.stack,
+            );
+          }
+          return 0;
         }
-      }
+      });
+
+      // Wait for all account processing to complete
+      const depositCounts = await Promise.all(processAccountPromises);
+
+      // Sum up all new deposits
+      const newDepositsCount = depositCounts.reduce(
+        (sum, count) => sum + count,
+        0,
+      );
 
       if (newDepositsCount > 0) {
         this.logger.log(`Added ${newDepositsCount} new deposits`);
