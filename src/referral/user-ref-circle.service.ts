@@ -4,6 +4,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import dayjs from 'dayjs';
 import { UsersService } from '@/users/user.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
+import { SettingService } from '@/setting/setting.service';
+import { SettingKey } from '@/common/const';
 
 @Injectable()
 export class UserRefCircleService {
@@ -13,6 +18,9 @@ export class UserRefCircleService {
     @InjectRepository(UserRefCircleEntity)
     private readonly userRefCircleRepository: Repository<UserRefCircleEntity>,
     private readonly userService: UsersService,
+    @InjectQueue('withdraw')
+    private withdrawQueue: Queue<WithdrawRequestQueueDto>,
+    private readonly settingService: SettingService,
   ) {}
 
   async addCircleContribution(
@@ -71,6 +79,38 @@ export class UserRefCircleService {
         this.logger.error(err.message, err.stack);
       }
     }
+  }
+
+  async withdrawCircle(userId: number, circleId: number) {
+    const userRefCircle = await this.userRefCircleRepository.findOne({
+      where: { userId, circleId },
+    });
+
+    if (!userRefCircle) {
+      throw new Error('User ref circle not found');
+    }
+
+    if (userRefCircle.isWithdrawn) {
+      throw new Error('User ref circle is already withdrawn');
+    }
+
+    const minimumWithdraw = await this.settingService.getFloatSetting(
+      SettingKey.MINIMUM_REF_WITHDRAW_AMOUNT,
+      0.1,
+    );
+
+    if (userRefCircle.earnFromChild < minimumWithdraw) {
+      throw new Error('User ref circle earn from child is 0');
+    }
+
+    userRefCircle.isWithdrawn = true;
+    await this.userRefCircleRepository.save(userRefCircle);
+
+    await this.withdrawQueue.add('withdraw-ref', {
+      userId,
+      payout: userRefCircle.earnFromChild,
+      userRefCircleId: userRefCircle.id,
+    });
   }
 
   generateCircleId(date: Date = new Date()): number {
