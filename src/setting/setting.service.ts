@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Setting } from '@/setting/setting.entity';
 import { SettingKey } from '@/common/const';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { isPresent } from '@/common/filter';
 
 @Injectable()
 export class SettingService {
@@ -74,5 +75,42 @@ export class SettingService {
   async getFloatSetting(key: SettingKey, defaultValue: number) {
     const stringValue = await this.getSetting(key, defaultValue.toString());
     return parseFloat(stringValue);
+  }
+
+  createCacheKey(key: string) {
+    return `settings:${key}`;
+  }
+
+  async getExposeSettings<const T extends string, R = Record<T, string>>(
+    keys: T[],
+  ): Promise<R> {
+    const cached = await this.cacheManager.mget<string>(
+      keys.map((v) => this.createCacheKey(v)),
+    );
+    const cachedItems = cached.filter(isPresent);
+    if (cachedItems.length === keys.length) {
+      return keys.reduce<R>((curr, key, index) => {
+        return {
+          ...curr,
+          [key]: cached[index],
+        };
+      }, {} as R);
+    }
+    const setting = await this.settingsRepository.findBy({
+      key: In(keys),
+      expose: true,
+    });
+    await this.cacheManager.mset(
+      setting.map((v) => ({
+        key: this.createCacheKey(v.key),
+        value: v.value,
+      })),
+    );
+    return setting.reduce<R>((curr, acc) => {
+      return {
+        ...curr,
+        [acc.key]: acc.value,
+      };
+    }, {} as R);
   }
 }
