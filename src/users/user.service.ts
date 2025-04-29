@@ -29,8 +29,8 @@ export class UsersService {
     const existingUser = await this.findByTelegramId(telegramId);
 
     if (existingUser) {
-      if (existingUser.binanceLinkKey == '') {
-        existingUser.binanceLinkKey = this.generateRandomString(8);
+      if (existingUser.refCode == '' || existingUser.refCode == null) {
+        existingUser.refCode = this.generateRandomString(8);
         await this.usersRepository.save(existingUser);
       }
       if (chatId && existingUser.chatId !== chatId) {
@@ -44,7 +44,7 @@ export class UsersService {
       telegramId,
       telegramFullName,
       chatId,
-      binanceLinkKey: this.generateRandomString(8),
+      refCode: this.generateRandomString(8),
     });
 
     return this.usersRepository.save(newUser);
@@ -80,34 +80,6 @@ export class UsersService {
 
     user.binanceUsername = binanceUsername;
     return this.usersRepository.save(user);
-  }
-
-  async updateBinanceUsernameByLinkKey(
-    binanceLinkKey: string,
-    binanceUsername: string,
-  ) {
-    const existingUser = await this.findByBinanceUsername(binanceUsername);
-
-    if (existingUser) {
-      if (binanceLinkKey != existingUser.binanceLinkKey) {
-        return null;
-      } else {
-        existingUser.binanceUsername = binanceUsername;
-        await this.usersRepository.save(existingUser);
-        return existingUser;
-      }
-    }
-
-    const user = await this.usersRepository.findOneBy({
-      binanceLinkKey,
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    user.binanceUsername = binanceUsername;
-    return await this.usersRepository.save(user);
   }
 
   private generateRandomString(length: number): string {

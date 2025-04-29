@@ -26,7 +26,4 @@ export class User {
 
   @Column({ nullable: true })
   binanceUsername?: string;
-
-  @Column({ default: '' })
-  binanceLinkKey: string;
 }
