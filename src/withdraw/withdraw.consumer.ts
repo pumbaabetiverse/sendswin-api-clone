@@ -4,10 +4,13 @@ import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { WithdrawService } from '@/withdraw/withdraw.service';
 import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
-import { Logger } from '@nestjs/common';
+import { Logger, OnApplicationShutdown } from '@nestjs/common';
 
 @Processor('withdraw')
-export class WithdrawConsumer extends WorkerHost {
+export class WithdrawConsumer
+  extends WorkerHost
+  implements OnApplicationShutdown
+{
   private logger = new Logger(WithdrawConsumer.name);
 
   constructor(
@@ -15,6 +18,16 @@ export class WithdrawConsumer extends WorkerHost {
     private settingService: SettingService,
   ) {
     super();
+  }
+
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    this.logger.debug(
+      `Gracefully closing withdraw queue worker (signal: ${signal})`,
+    );
+
+    // Close the worker gracefully, allowing current jobs to finish
+    await this.worker.close();
+    this.logger.debug('Withdraw queue worker closed successfully');
   }
 
   async process(job: Job<WithdrawRequestQueueDto, any, string>): Promise<any> {

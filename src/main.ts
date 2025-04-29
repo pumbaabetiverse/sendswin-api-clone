@@ -55,6 +55,8 @@ async function bootstrap() {
     ],
   });
 
+  app.enableShutdownHooks();
+
   app.useGlobalInterceptors(new TimeoutInterceptor());
 
   const configService =
