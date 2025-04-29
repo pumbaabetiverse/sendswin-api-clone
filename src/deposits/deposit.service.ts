@@ -134,7 +134,7 @@ export class DepositsService {
     }
   }
 
-  determineOUResult(
+  determineOddEvenResult(
     option: DepositOption,
     transactionId: string,
   ): DepositResult {
@@ -144,10 +144,9 @@ export class DepositsService {
 
     // Get the last character of the transaction ID
     const sumDigit =
-      (parseInt(transactionId.charAt(transactionId.length - 1), 10) +
-        parseInt(transactionId.charAt(transactionId.length - 2), 10) +
-        parseInt(transactionId.charAt(transactionId.length - 3), 10)) %
-      10;
+      parseInt(transactionId.charAt(transactionId.length - 1), 10) +
+      parseInt(transactionId.charAt(transactionId.length - 2), 10) +
+      parseInt(transactionId.charAt(transactionId.length - 3), 10);
 
     // Check if the sum digit is a number
     if (isNaN(sumDigit)) {
@@ -158,14 +157,14 @@ export class DepositsService {
     }
 
     // Determine if the last digit is odd or even
-    const isOver = sumDigit >= 5;
+    const isOdd = sumDigit % 2 == 1;
 
-    const isUnder = sumDigit < 5;
+    const isEven = sumDigit % 2 == 0;
 
     // Determine if the user wins based on their option and the outcome
-    if (option == DepositOption.OVER && isOver) {
+    if (option == DepositOption.ODD && isOdd) {
       return DepositResult.WIN;
-    } else if (option === DepositOption.UNDER && isUnder) {
+    } else if (option === DepositOption.EVEN && isEven) {
       return DepositResult.WIN;
     } else {
       return DepositResult.LOSE;
@@ -215,15 +214,9 @@ export class DepositsService {
       deposit.option = account.option;
 
       if (!item.payerInfo?.name) {
+        deposit.payerUsername = item.payerInfo?.name;
         await this.depositsRepository.save(deposit);
         return;
-      }
-
-      if (item.note.length > 0) {
-        await this.usersService.updateBinanceUsernameByLinkKey(
-          item.note,
-          item.payerInfo.name,
-        );
       }
 
       const user = await this.usersService.findByBinanceUsername(
@@ -245,27 +238,30 @@ export class DepositsService {
       }
 
       if (
-        account.option === DepositOption.OVER ||
-        account.option === DepositOption.UNDER
+        account.option === DepositOption.ODD ||
+        account.option === DepositOption.EVEN
       ) {
         const minAmount = await this.settingService.getFloatSetting(
-          SettingKey.OVER_UNDER_MIN_AMOUNT,
+          SettingKey.ODD_EVEN_MIN_AMOUNT,
           0.5,
         );
         const maxAmount = await this.settingService.getFloatSetting(
-          SettingKey.OVER_UNDER_MAX_AMOUNT,
+          SettingKey.ODD_EVEN_MAX_AMOUNT,
           50,
         );
 
         if (amount >= minAmount && amount <= maxAmount) {
-          deposit.result = this.determineOUResult(account.option, item.orderId);
+          deposit.result = this.determineOddEvenResult(
+            account.option,
+            item.orderId,
+          );
         } else {
           deposit.result = DepositResult.VOID;
         }
 
         if (deposit.result == DepositResult.WIN) {
           const multiplier = await this.settingService.getFloatSetting(
-            SettingKey.OVER_UNDER_MULTIPLIER,
+            SettingKey.ODD_EVEN_MULTIPLIER,
             1.95,
           );
           deposit.payout = amount * multiplier;

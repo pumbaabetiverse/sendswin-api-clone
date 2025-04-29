@@ -102,12 +102,12 @@ export class TelegramService {
     deposit: Deposit,
   ): Promise<void> {
     try {
-      let optionDisplay = '🔺 OVER';
+      let optionDisplay = 'Ⓞ ODD';
 
       if (deposit.option == DepositOption.UNDER) {
-        optionDisplay = '🔻 UNDER';
+        optionDisplay = 'Ⓔ EVEN';
       } else if (deposit.option == DepositOption.LUCKY_NUMBER) {
-        optionDisplay = '🎲 LUCKY NUMBER';
+        optionDisplay = '🍀 GOLDEN 7';
       }
 
       // Format the result for better readability
@@ -241,7 +241,7 @@ export class TelegramService {
 
       // Prepare game instructions
       const instructions = `
-🎮 *Game Over/Under*:
+🎮 *Game Odd/Even*:
 
 💰 Betting amount: 0.5-50 USDT
 💎 Win multiplier: 1.95x your bet
@@ -249,13 +249,13 @@ export class TelegramService {
 Good luck! 🍀
       `;
 
-      const overAccount =
+      const oddAccount =
         await this.binanceService.getRandomActiveBinanceAccount(
-          DepositOption.OVER,
+          DepositOption.ODD,
         );
-      const underAccount =
+      const evenAccount =
         await this.binanceService.getRandomActiveBinanceAccount(
-          DepositOption.UNDER,
+          DepositOption.EVEN,
         );
 
       // Send QR code with game instructions
@@ -272,14 +272,14 @@ Good luck! 🍀
             inline_keyboard: [
               [
                 {
-                  text: '🔺 OVER',
+                  text: 'Ⓞ Odd',
                   url:
-                    overAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
+                    oddAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
                 },
                 {
-                  text: '🔻 UNDER',
+                  text: 'Ⓔ Even',
                   url:
-                    underAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
+                    evenAccount?.binanceQrCodeUrl ?? 'https://app.binance.com',
                 },
               ],
               [{ text: '🔙 Back to Main Menu', callback_data: 'back_to_menu' }],
@@ -877,8 +877,8 @@ Good luck! 🍀
 
     if (user.walletAddress && user.binanceUsername) {
       buttons.push([
-        { text: '🔺 Over/Under 🔻', callback_data: 'play_game' },
-        { text: '🍀 GOLDEN 7️', callback_data: 'play_lucky_number' },
+        { text: 'Ⓞ Odd/Even Ⓔ', callback_data: 'play_game' },
+        { text: '🍀 Golden 7️', callback_data: 'play_lucky_number' },
       ]);
       buttons.push([
         { text: '📊 View History', callback_data: 'view_history' },

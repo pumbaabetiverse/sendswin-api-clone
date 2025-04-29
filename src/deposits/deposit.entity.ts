@@ -17,6 +17,8 @@ export enum DepositResult {
 export enum DepositOption {
   OVER = 'over',
   UNDER = 'under',
+  ODD = 'odd',
+  EVEN = 'even',
   LUCKY_NUMBER = 'lucky_number',
 }
 
