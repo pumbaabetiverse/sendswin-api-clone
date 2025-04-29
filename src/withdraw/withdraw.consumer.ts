@@ -23,12 +23,21 @@ export class WithdrawConsumer extends WorkerHost {
         SettingKey.ENABLE_USER_WITHDRAW,
         'false',
       );
-      if (isEnable == 'true' || isEnable == '1')
-        await this.withdrawService.processWithdrawOnChain(
-          job.data.userId,
-          job.data.payout,
-          job.data.depositOrderId,
-        );
+      if (isEnable == 'true' || isEnable == '1') {
+        if (job.data.depositOrderId) {
+          await this.withdrawService.processWithdrawOnChain(
+            job.data.userId,
+            job.data.payout,
+            job.data.depositOrderId,
+          );
+        } else if (job.data.userRefCircleId) {
+          await this.withdrawService.processRefWithdrawOnChain(
+            job.data.userId,
+            job.data.payout,
+            job.data.userRefCircleId,
+          );
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         this.logger.error(err.message, err.stack);
