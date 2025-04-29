@@ -1,7 +1,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { Injectable, Logger } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import dayjs from 'dayjs';
 import { UsersService } from '@/users/user.service';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -81,6 +81,23 @@ export class UserRefCircleService {
     }
   }
 
+  async getUserRefCircleAndChildren(userId: number, circleIds: number[]) {
+    const userRefCircles = await this.userRefCircleRepository.findBy({
+      userId,
+      circleId: In(circleIds),
+    });
+
+    const childRefCircles = await this.userRefCircleRepository.findBy({
+      parentId: userId,
+      circleId: In(circleIds),
+    });
+
+    return {
+      userRefCircles,
+      childRefCircles,
+    };
+  }
+
   async withdrawCircle(userId: number, circleId: number) {
     const userRefCircle = await this.userRefCircleRepository.findOne({
       where: { userId, circleId },
@@ -100,7 +117,9 @@ export class UserRefCircleService {
     );
 
     if (userRefCircle.earnFromChild < minimumWithdraw) {
-      throw new Error('User ref circle earn from child is 0');
+      throw new Error(
+        'Withdraw amount must be greater than ' + minimumWithdraw,
+      );
     }
 
     userRefCircle.isWithdrawn = true;

@@ -1,7 +1,8 @@
-import { Body, Controller, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, Query } from '@nestjs/common';
 import { UserRefCircleService } from '@/referral/user-ref-circle.service';
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
 import {
+  GetRefCircleResponse,
   WithdrawUserRefCircleRequest,
   WithdrawUserRefCircleResponse,
 } from '@/referral/user-ref-circle.dto';
@@ -37,5 +38,27 @@ export class UserRefCircleController {
       success: false,
       message: 'Unknown error',
     };
+  }
+
+  @Get('')
+  @Authenticated()
+  async getRefCircleInfo(
+    @AuthUser('userId') userId: number,
+    @Query('circleIds') circleIds: number[],
+  ): Promise<GetRefCircleResponse> {
+    try {
+      return await this.userRefCircleService.getUserRefCircleAndChildren(
+        userId,
+        circleIds,
+      );
+    } catch (err) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack);
+      }
+      return {
+        childRefCircles: [],
+        userRefCircles: [],
+      };
+    }
   }
 }
