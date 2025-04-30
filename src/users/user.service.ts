@@ -25,6 +25,7 @@ export class UsersService {
     telegramId: string,
     telegramFullName: string,
     chatId?: string,
+    inviteCode?: string,
   ): Promise<User> {
     const existingUser = await this.findByTelegramId(telegramId);
 
@@ -40,11 +41,23 @@ export class UsersService {
       return existingUser;
     }
 
+    let parentId: number | undefined;
+
+    if (inviteCode) {
+      const parentUser = await this.usersRepository.findOneBy({
+        refCode: inviteCode,
+      });
+      if (parentUser) {
+        parentId = parentUser.id;
+      }
+    }
+
     const newUser = this.usersRepository.create({
       telegramId,
       telegramFullName,
       chatId,
       refCode: this.generateRandomString(8),
+      parentId,
     });
 
     return this.usersRepository.save(newUser);
