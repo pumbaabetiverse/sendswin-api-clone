@@ -1,8 +1,9 @@
 // src/users/users.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { User } from '@/users/user.entity';
+import { isAddress } from 'viem';
 
 @Injectable()
 export class UsersService {
@@ -60,17 +61,21 @@ export class UsersService {
   }
 
   async updateWalletAddress(
-    telegramId: string,
+    userId: number,
     walletAddress: string,
-  ): Promise<User | null> {
-    const user = await this.findByTelegramId(telegramId);
-
-    if (!user) {
-      return null;
+  ): Promise<UpdateResult> {
+    if (!isAddress(walletAddress)) {
+      throw new Error('Invalid wallet address');
     }
 
-    user.walletAddress = walletAddress;
-    return this.usersRepository.save(user);
+    return await this.usersRepository.update(
+      {
+        id: userId,
+      },
+      {
+        walletAddress,
+      },
+    );
   }
 
   async findByBinanceUsername(binanceUsername: string): Promise<User | null> {
@@ -78,17 +83,21 @@ export class UsersService {
   }
 
   async updateBinanceUsername(
-    telegramId: string,
+    userId: number,
     binanceUsername: string,
-  ): Promise<User | null> {
-    const user = await this.findByTelegramId(telegramId);
-
-    if (!user) {
-      return null;
+  ): Promise<UpdateResult> {
+    if (await this.findByBinanceUsername(binanceUsername)) {
+      throw new Error('Binance username already exists');
     }
 
-    user.binanceUsername = binanceUsername;
-    return this.usersRepository.save(user);
+    return await this.usersRepository.update(
+      {
+        id: userId,
+      },
+      {
+        binanceUsername,
+      },
+    );
   }
 
   private generateRandomString(length: number): string {

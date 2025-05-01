@@ -1,18 +1,89 @@
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
 import { UsersService } from '../user.service';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { User } from '../user.entity';
+import {
+  UpdateUserBinanceUsernameRequest,
+  UpdateUserWalletAddressRequest,
+} from '@/users/user.dto';
+import { ActionResponse } from '@/common/dto/base.dto';
 
 @Controller('user')
 export class UserController {
+  private readonly logger = new Logger(UserController.name);
+
   constructor(private readonly userService: UsersService) {}
+
   @Get('me')
   @Authenticated()
   @ApiOkResponse({
     type: User,
   })
-  getMe(@AuthUser('userId') id: number) {
-    return this.userService.findById(id);
+  getMe(@AuthUser('userId') userId: number) {
+    return this.userService.findById(userId);
+  }
+
+  @Post('me/wallet')
+  @Authenticated()
+  @ApiOkResponse({
+    type: ActionResponse,
+  })
+  async updateWallet(
+    @AuthUser('userId') userId: number,
+    @Body() request: UpdateUserWalletAddressRequest,
+  ): Promise<ActionResponse> {
+    try {
+      await this.userService.updateWalletAddress(userId, request.walletAddress);
+      return {
+        success: true,
+        message: '',
+      };
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack);
+        return {
+          success: false,
+          message: err.message,
+        };
+      }
+    }
+    return {
+      success: false,
+      message: 'Unknown error',
+    };
+  }
+
+  @Post('me/binance')
+  @Authenticated()
+  @ApiOkResponse({
+    type: ActionResponse,
+  })
+  async updateBinanceUsername(
+    @AuthUser('userId') userId: number,
+    @Body() request: UpdateUserBinanceUsernameRequest,
+  ): Promise<ActionResponse> {
+    try {
+      await this.userService.updateBinanceUsername(
+        userId,
+        request.binanceUsername,
+      );
+      return {
+        success: true,
+        message: '',
+      };
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        this.logger.error(err.message, err.stack);
+        return {
+          success: false,
+          message: err.message,
+        };
+      }
+    }
+    return {
+      success: false,
+      message: 'Unknown error',
+    };
   }
 }
