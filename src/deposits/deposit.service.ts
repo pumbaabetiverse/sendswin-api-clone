@@ -15,17 +15,17 @@ import {
   DepositResult,
 } from '@/deposits/deposit.entity';
 import { SettingService } from '@/setting/setting.service';
-import { TelegramService } from '@/telegram/telegram.service';
 import { UsersService } from '@/users/user.service';
 import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { InjectQueue } from '@nestjs/bullmq';
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
+import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 
 @Injectable()
 export class DepositsService {
@@ -35,8 +35,6 @@ export class DepositsService {
     @InjectRepository(Deposit)
     private depositsRepository: Repository<Deposit>,
     private usersService: UsersService,
-    @Inject(forwardRef(() => TelegramService))
-    private telegramService: TelegramService,
     private binanceService: BinanceService,
     private settingService: SettingService,
     @InjectQueue('withdraw')
@@ -335,10 +333,10 @@ export class DepositsService {
       }
 
       if (user.chatId) {
-        await this.telegramService.sendNewGameResultMessage(
-          Number(user.chatId),
+        this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
+          userChatId: user.chatId,
           deposit,
-        );
+        } satisfies TelegramNewGameEvent);
       }
 
       if (deposit.result == DepositResult.WIN) {

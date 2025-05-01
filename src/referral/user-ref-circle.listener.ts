@@ -8,7 +8,7 @@ import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 export class UserRefCircleListener {
   constructor(private readonly userRefCircleService: UserRefCircleService) {}
 
-  @OnEvent(EventName.REF_CONTRIBUTE)
+  @OnEvent(EventName.REF_CONTRIBUTE, { async: true })
   async handleRefContribute(payload: RefContributeEvent) {
     const amount =
       await this.userRefCircleService.calculateEarnAmountFromDeposit(
