@@ -10,9 +10,8 @@ import { TelegramModule } from '@/telegram/telegram.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
 import { SettingModule } from '@/setting/setting.module';
-import { AdminDepositController } from './controllers/admin.deposit.controller';
-import { AdminDepositService } from './services/admin.deposit.service';
-import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
+import { AdminDepositController } from '@/deposits/controllers/admin.deposit.controller';
+import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
 
 @Module({
   controllers: [AdminDepositController],
@@ -28,7 +27,6 @@ import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
     BullModule.registerQueue({
       name: 'deposit-process',
     }),
-    UserRefCircleModule,
   ],
   providers: [
     DepositsService,

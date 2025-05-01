@@ -7,12 +7,18 @@ import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { getBotToken } from 'nestjs-telegraf';
 import qs from 'qs';
 import { Telegraf } from 'telegraf';
-import { AppModule } from './app.module';
-import { TimeoutInterceptor } from './common/middlewares/timeout.interceptor';
-import { EnvironmentVariables } from './common/types';
-import { setupSwagger } from './setupSwagger';
+import {
+  initializeTransactionalContext,
+  StorageDriver,
+} from 'typeorm-transactional';
+import { AppModule } from '@/app.module';
+import { TimeoutInterceptor } from '@/common/middlewares/timeout.interceptor';
+import { EnvironmentVariables } from '@/common/types';
+import { setupSwagger } from '@/setupSwagger';
 
 async function bootstrap() {
+  initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
+
   const adapter = new FastifyAdapter({
     querystringParser: (str) => qs.parse(str),
     logger: false,

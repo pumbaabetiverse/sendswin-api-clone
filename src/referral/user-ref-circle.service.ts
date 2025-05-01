@@ -15,6 +15,7 @@ import {
   PaginationResponse,
 } from '@/common/dto/pagination.dto';
 import { composePagination } from '@/common/pagination';
+import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 
 @Injectable()
 export class UserRefCircleService {
@@ -28,6 +29,41 @@ export class UserRefCircleService {
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly settingService: SettingService,
   ) {}
+
+  async calculateEarnAmountFromDeposit(
+    amount: number,
+    depositOption: DepositOption,
+    depositResult: DepositResult,
+  ): Promise<number> {
+    if (
+      depositOption == DepositOption.OVER ||
+      depositOption == DepositOption.UNDER
+    ) {
+      return 0;
+    }
+
+    if (depositResult == DepositResult.VOID) {
+      return 0;
+    }
+
+    let refMultiplier = 0;
+    if (
+      depositOption == DepositOption.ODD ||
+      depositOption == DepositOption.EVEN
+    ) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.ODD_EVEN_REF_MULTIPLIER,
+        0.01,
+      );
+    } else if (depositOption == DepositOption.LUCKY_NUMBER) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.LUCKY_NUMBER_REF_MULTIPLIER,
+        0.3,
+      );
+    }
+
+    return amount * refMultiplier;
+  }
 
   async addCircleContribution(
     userId: number,

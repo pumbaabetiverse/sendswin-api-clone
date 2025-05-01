@@ -29,6 +29,7 @@
     "@nestjs/common": "^11.0.21",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.21",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "11.0.0",
     "@nestjs/platform-fastify": "11.0.21",
     "@nestjs/schedule": "^6.0.0",
@@ -58,6 +59,7 @@
     "telegraf": "^4.16.3",
     "telegraf-session-local": "^2.1.1",
     "typeorm": "^0.3.22",
+    "typeorm-transactional": "^0.5.0",
     "viem": "2.28.0"
   },
   "devDependencies": {

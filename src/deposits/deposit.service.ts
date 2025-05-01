@@ -23,7 +23,9 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
-import { UserRefCircleService } from '@/referral/user-ref-circle.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventName } from '@/common/event-name';
+import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 
 @Injectable()
 export class DepositsService {
@@ -41,7 +43,7 @@ export class DepositsService {
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     @InjectQueue('deposit-process')
     private depositProcessQueue: Queue<DepositProcessQueueDto>,
-    private readonly userRefCircleService: UserRefCircleService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async historyPagination(
@@ -319,30 +321,17 @@ export class DepositsService {
         }
       }
 
-      const savedDeposit = await this.depositsRepository.save(deposit);
+      await this.depositsRepository.insert(deposit);
 
-      if (savedDeposit.result != DepositResult.VOID && user.parentId) {
-        let refMultiplier = 0;
-        if (
-          savedDeposit.option == DepositOption.ODD ||
-          savedDeposit.option == DepositOption.EVEN
-        ) {
-          refMultiplier = await this.settingService.getFloatSetting(
-            SettingKey.ODD_EVEN_REF_MULTIPLIER,
-            0.01,
-          );
-        } else if (savedDeposit.option == DepositOption.LUCKY_NUMBER) {
-          refMultiplier = await this.settingService.getFloatSetting(
-            SettingKey.LUCKY_NUMBER_REF_MULTIPLIER,
-            0.3,
-          );
-        }
-        await this.userRefCircleService.addCircleContribution(
-          user.id,
-          user.parentId,
-          deposit.amount * refMultiplier,
-          savedDeposit.createdAt,
-        );
+      if (user.parentId) {
+        this.eventEmitter.emit(EventName.REF_CONTRIBUTE, {
+          userId: user.id,
+          parentId: user.parentId,
+          amount: deposit.amount,
+          createdAt: new Date(),
+          depositOption: account.option,
+          depositResult: deposit.result,
+        } satisfies RefContributeEvent);
       }
 
       if (user.chatId) {

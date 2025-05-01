@@ -20,11 +20,30 @@ import { EnvironmentVariables } from './common/types';
 import { HealthModule } from './health/health.module';
 import { GameModule } from './game/game.module';
 import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
+import { addTransactionalDataSource } from 'typeorm-transactional';
+import { DataSource } from 'typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    EventEmitterModule.forRoot({
+      // set this to `true` to use wildcards
+      wildcard: false,
+      // the delimiter used to segment namespaces
+      delimiter: '.',
+      // set this to `true` if you want to emit the newListener event
+      newListener: false,
+      // set this to `true` if you want to emit the removeListener event
+      removeListener: false,
+      // the maximum amount of listeners that can be assigned to an event
+      maxListeners: 10,
+      // show event name in memory leak message when more than maximum amount of listeners is assigned
+      verboseMemoryLeak: false,
+      // disable throwing uncaughtException if an error event is emitted and it has no listeners
+      ignoreErrors: false,
     }),
     CacheModule.register({
       isGlobal: true,
@@ -45,6 +64,13 @@ import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
         logging: configService.get('DB_LOGGING', false, { infer: true }),
         autoLoadEntities: true,
       }),
+      async dataSourceFactory(options) {
+        if (!options) {
+          throw new Error('Invalid options passed');
+        }
+        const dataSource = await new DataSource(options).initialize();
+        return addTransactionalDataSource(dataSource);
+      },
     }),
     BullModule.forRootAsync({
       imports: [ConfigModule],

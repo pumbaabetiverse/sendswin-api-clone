@@ -6,6 +6,7 @@ import { UsersModule } from '@/users/user.module';
 import { SettingModule } from '@/setting/setting.module';
 import { BullModule } from '@nestjs/bullmq';
 import { UserRefCircleController } from '@/referral/user-ref-circle.controller';
+import { UserRefCircleListener } from '@/referral/user-ref-circle.listener';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { UserRefCircleController } from '@/referral/user-ref-circle.controller';
     }),
   ],
   controllers: [UserRefCircleController],
-  providers: [UserRefCircleService],
+  providers: [UserRefCircleService, UserRefCircleListener],
   exports: [UserRefCircleService],
 })
 export class UserRefCircleModule {}
