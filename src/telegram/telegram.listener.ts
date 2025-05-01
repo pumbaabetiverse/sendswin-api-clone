@@ -10,9 +10,6 @@ export class TelegramListener {
 
   @OnEvent(EventName.TELEGRAM_NEW_GAME, { async: true })
   async handleTelegramNewGame(payload: TelegramNewGameEvent) {
-    await this.telegramService.sendNewGameResultMessage(
-      Number(payload.userChatId),
-      payload.deposit,
-    );
+    await this.telegramService.sendNewGameResultMessage(payload);
   }
 }

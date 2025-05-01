@@ -335,7 +335,11 @@ export class DepositsService {
       if (user.chatId) {
         this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
           userChatId: user.chatId,
-          deposit,
+          orderId: deposit.orderId,
+          result: deposit.result,
+          amount: deposit.amount,
+          payout: deposit.payout,
+          option: account.option,
         } satisfies TelegramNewGameEvent);
       }
 

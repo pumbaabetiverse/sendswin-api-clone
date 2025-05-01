@@ -4,13 +4,10 @@ import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { SettingService } from '@/setting/setting.service';
-import {
-  Deposit,
-  DepositOption,
-  DepositResult,
-} from '@/deposits/deposit.entity';
+import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 import { SettingKey } from '@/common/const';
 import { getTransactionUrl } from '@/common/web3.client';
+import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 
 @Injectable()
 export class TelegramService {
@@ -38,22 +35,19 @@ export class TelegramService {
     }
   }
 
-  async sendNewGameResultMessage(
-    chatId: number,
-    deposit: Deposit,
-  ): Promise<void> {
+  async sendNewGameResultMessage(payload: TelegramNewGameEvent): Promise<void> {
     try {
       let optionDisplay = 'Ⓞ ODD';
 
-      if (deposit.option == DepositOption.UNDER) {
+      if (payload.option == DepositOption.UNDER) {
         optionDisplay = 'Ⓔ EVEN';
-      } else if (deposit.option == DepositOption.LUCKY_NUMBER) {
+      } else if (payload.option == DepositOption.LUCKY_NUMBER) {
         optionDisplay = '🍀 GOLDEN 7';
       }
 
       // Format the result for better readability
       let resultDisplay: string;
-      switch (deposit.result) {
+      switch (payload.result) {
         case DepositResult.WIN:
           resultDisplay = '✅ WIN';
           break;
@@ -69,16 +63,16 @@ export class TelegramService {
       const message = `
   🎮 *New Game Result*
 
-  🔢 Order ID: \`${deposit.orderId}\`
+  🔢 Order ID: \`${payload.orderId}\`
   🎲 Your choice: ${optionDisplay}
-  💰 Amount: ${deposit.amount} USDT
+  💰 Amount: ${payload.amount} USDT
   🏆 Result: ${resultDisplay}
   `;
 
       // Add an extra message for winners
       const extra =
-        deposit.result === DepositResult.WIN
-          ? `\n🎉 Congratulations! Your payout of ${deposit.payout} USDT will be processed shortly.\n\n⚠️ *Important*: If you do not receive your payout within 5 minutes, please contact our customer support.`
+        payload.result === DepositResult.WIN
+          ? `\n🎉 Congratulations! Your payout of ${payload.payout} USDT will be processed shortly.\n\n⚠️ *Important*: If you do not receive your payout within 5 minutes, please contact our customer support.`
           : '';
 
       const supportUrl = await this.settingService.getSetting(
@@ -87,7 +81,7 @@ export class TelegramService {
       );
 
       // Send the notification to the user
-      await this.sendMessage(chatId, message + extra, {
+      await this.sendMessage(Number(payload.userChatId), message + extra, {
         reply_markup: {
           inline_keyboard: [
             [

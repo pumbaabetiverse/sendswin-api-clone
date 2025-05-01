@@ -1,6 +1,10 @@
-import { Deposit } from '@/deposits/deposit.entity';
+import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 
 export class TelegramNewGameEvent {
   userChatId: string;
-  deposit: Deposit;
+  orderId: string;
+  amount: number;
+  payout: number;
+  option: DepositOption;
+  result: DepositResult;
 }
