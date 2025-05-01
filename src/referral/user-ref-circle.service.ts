@@ -144,6 +144,18 @@ export class UserRefCircleService {
     });
   }
 
+  async getAggregateUserRef(userId: number) {
+    const childCount = await this.userService.countUserChild(userId);
+    const totalEarned =
+      (await this.userRefCircleRepository.sum('earnFromChild', {
+        userId,
+      })) ?? 0;
+    return {
+      childCount,
+      totalEarned,
+    };
+  }
+
   generateCircleId(date: Date = new Date()): number {
     const year = dayjs(date).year();
     const weekNumber = dayjs(date).week();

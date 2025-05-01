@@ -12,6 +12,12 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
+  async countUserChild(id: number): Promise<number> {
+    return this.usersRepository.countBy({
+      parentId: id,
+    });
+  }
+
   async findById(id: number): Promise<User | null> {
     return this.usersRepository.findOneBy({
       id,

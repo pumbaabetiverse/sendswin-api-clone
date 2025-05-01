@@ -10,12 +10,14 @@ import {
 import { UserRefCircleService } from '@/referral/user-ref-circle.service';
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
 import {
+  GetAggregateUserRefResponse,
   WithdrawUserRefCircleRequest,
-  WithdrawUserRefCircleResponse,
 } from '@/referral/user-ref-circle.dto';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { ApiOkResponsePagination } from '@/common/dto/response.dto';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
+import { ApiOkResponse } from '@nestjs/swagger';
+import { ActionResponse } from '@/common/dto/base.dto';
 
 @Controller('user-ref-circle')
 export class UserRefCircleController {
@@ -28,7 +30,7 @@ export class UserRefCircleController {
   async withdraw(
     @AuthUser('userId') userId: number,
     @Body() request: WithdrawUserRefCircleRequest,
-  ): Promise<WithdrawUserRefCircleResponse> {
+  ): Promise<ActionResponse> {
     try {
       await this.userRefCircleService.withdrawCircle(userId, request.circleId);
       return {
@@ -66,6 +68,17 @@ export class UserRefCircleController {
         circleId: 'DESC',
       },
     );
+  }
+
+  @Get('aggregate')
+  @Authenticated()
+  @ApiOkResponse({
+    type: GetAggregateUserRefResponse,
+  })
+  async getAggregateUserRef(
+    @AuthUser('userId') userId: number,
+  ): Promise<GetAggregateUserRefResponse> {
+    return await this.userRefCircleService.getAggregateUserRef(userId);
   }
 
   @Get(':circleId/children')
