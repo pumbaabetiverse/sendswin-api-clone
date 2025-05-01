@@ -30,13 +30,9 @@ export class UsersService {
     const existingUser = await this.findByTelegramId(telegramId);
 
     if (existingUser) {
-      if (existingUser.refCode == '' || existingUser.refCode == null) {
-        existingUser.refCode = this.generateRandomString(8);
-        await this.usersRepository.save(existingUser);
-      }
       if (chatId && existingUser.chatId !== chatId) {
         existingUser.chatId = chatId;
-        await this.usersRepository.save(existingUser);
+        return await this.usersRepository.save(existingUser);
       }
       return existingUser;
     }
