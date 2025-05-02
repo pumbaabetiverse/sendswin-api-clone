@@ -10,6 +10,7 @@ import { BinanceModule } from '@/binance/binance.module';
 import { SettingModule } from '@/setting/setting.module';
 import { AdminDepositController } from '@/deposits/controllers/admin.deposit.controller';
 import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
+import { CacheModule } from '@/cache/cache.module';
 
 @Module({
   controllers: [AdminDepositController],
@@ -21,6 +22,7 @@ import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
     BullModule.registerQueue({
       name: 'withdraw',
     }),
+    CacheModule,
   ],
   providers: [DepositsService, DepositsScheduler, AdminDepositService],
   exports: [DepositsService],

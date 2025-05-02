@@ -23,6 +23,7 @@ import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
@@ -48,6 +49,23 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     CacheModule.register({
       isGlobal: true,
       ttl: 5 * 60 * 1000, // 5 minutes in milliseconds
+    }),
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        if (!redisUrl) {
+          throw new Error('REDIS_URL is not defined');
+        }
+        return {
+          type: 'single',
+          url: redisUrl,
+          options: {
+            tls: redisUrl.includes('localhost') ? undefined : {},
+          },
+        };
+      },
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({

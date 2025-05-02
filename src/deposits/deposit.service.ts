@@ -30,6 +30,7 @@ import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 import { BinanceAccount } from '@/binance/binance.entity';
+import { CacheService } from '@/cache/cache.service';
 
 @Injectable()
 export class DepositsService {
@@ -44,6 +45,7 @@ export class DepositsService {
     @InjectQueue('withdraw')
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cacheService: CacheService,
   ) {}
 
   async historyPagination(
@@ -280,10 +282,21 @@ export class DepositsService {
         data
           .filter((item) => this.isDepositHistory(item))
           .map(async (item) => {
-            await this.processDepositItem({
-              item,
-              account,
-            });
+            try {
+              await this.cacheService.executeWithLock(
+                `lock:deposit:${item.orderId}`,
+                3000,
+                async () =>
+                  await this.processDepositItem({
+                    item,
+                    account,
+                  }),
+              );
+            } catch (error) {
+              if (error instanceof Error) {
+                this.logger.error(error.message, error.stack);
+              }
+            }
           }),
       );
     } catch (error) {
