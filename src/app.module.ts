@@ -23,11 +23,25 @@ import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { MurLockModule } from 'murlock';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    MurLockModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService<EnvironmentVariables>) => ({
+        redisOptions: {
+          url: configService.get('REDIS_URL'),
+        },
+        wait: 1000,
+        maxAttempts: 3,
+        logLevel: 'warn',
+        ignoreUnlockFail: true,
+      }),
+      inject: [ConfigService],
     }),
     EventEmitterModule.forRoot({
       // set this to `true` to use wildcards
