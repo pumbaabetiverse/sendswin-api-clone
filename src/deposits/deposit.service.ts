@@ -8,7 +8,10 @@ import {
   PaginationResponse,
 } from '@/common/dto/pagination.dto';
 import { composePagination } from '@/common/pagination';
-import { DepositProcessQueueDto } from '@/deposits/deposit.dto';
+import {
+  DepositProcessQueueDto,
+  PayTradeHistoryItem,
+} from '@/deposits/deposit.dto';
 import {
   Deposit,
   DepositOption,
@@ -40,8 +43,6 @@ export class DepositsService {
     private settingService: SettingService,
     @InjectQueue('withdraw')
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
-    @InjectQueue('deposit-process')
-    private depositProcessQueue: Queue<DepositProcessQueueDto>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -275,56 +276,16 @@ export class DepositsService {
       // Get pay trade history for this account
       const data = await this.binanceService.getPayTradeHistory(account);
 
-      // Process each item
-      let processedCount = 0;
-
-      for (const item of data) {
-        try {
-          const amount = parseFloat(item.amount);
-
-          // Check if this is a C2C transaction, with amount >= 0, and the currency is USDT
-          if (
-            item.orderType === 'C2C' &&
-            item.currency === 'USDT' &&
-            amount >= 0
-          ) {
-            // Check if a deposit with this orderId already exists
-            const existingDeposit = await this.depositsRepository.findOneBy({
-              orderId: item.orderId,
+      await Promise.all(
+        data
+          .filter((item) => this.isDepositHistory(item))
+          .map(async (item) => {
+            await this.processDepositItem({
+              item,
+              account,
             });
-
-            if (!existingDeposit) {
-              // Add to the deposit process queue
-              await this.depositProcessQueue.add(
-                'process-deposit',
-                {
-                  item,
-                  account,
-                },
-                {
-                  removeOnComplete: true,
-                  removeOnFail: true,
-                },
-              );
-
-              processedCount++;
-            }
-          }
-        } catch (error) {
-          if (error instanceof Error) {
-            this.logger.error(
-              `Error processing pay trade history item for account ${account.id}: ${error.message}`,
-              error.stack,
-            );
-          }
-        }
-      }
-
-      if (processedCount > 0) {
-        this.logger.log(
-          `Processed ${processedCount} items for account ${account.id}`,
-        );
-      }
+          }),
+      );
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
@@ -333,5 +294,13 @@ export class DepositsService {
         );
       }
     }
+  }
+
+  private isDepositHistory(item: PayTradeHistoryItem) {
+    return (
+      item.orderType == 'C2C' &&
+      item.currency == 'USDT' &&
+      parseFloat(item.amount) >= 0
+    );
   }
 }

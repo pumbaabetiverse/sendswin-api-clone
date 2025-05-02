@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Deposit } from '@/deposits/deposit.entity';
 import { DepositsService } from '@/deposits/deposit.service';
 import { DepositsScheduler } from '@/deposits/deposit.scheduler';
-import { DepositConsumer } from '@/deposits/deposit.consumer';
 import { UsersModule } from '@/users/user.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
@@ -22,16 +21,8 @@ import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
     BullModule.registerQueue({
       name: 'withdraw',
     }),
-    BullModule.registerQueue({
-      name: 'deposit-process',
-    }),
   ],
-  providers: [
-    DepositsService,
-    DepositsScheduler,
-    DepositConsumer,
-    AdminDepositService,
-  ],
+  providers: [DepositsService, DepositsScheduler, AdminDepositService],
   exports: [DepositsService],
 })
 export class DepositsModule {}
