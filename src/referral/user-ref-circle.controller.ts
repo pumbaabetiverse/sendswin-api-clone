@@ -18,12 +18,16 @@ import { ApiOkResponsePagination } from '@/common/dto/response.dto';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { ActionResponse } from '@/common/dto/base.dto';
+import { CacheService } from '@/cache/cache.service';
 
 @Controller('user-ref-circle')
 export class UserRefCircleController {
   private readonly logger = new Logger(UserRefCircleController.name);
 
-  constructor(private readonly userRefCircleService: UserRefCircleService) {}
+  constructor(
+    private readonly userRefCircleService: UserRefCircleService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   @Post('withdraw')
   @Authenticated()
@@ -32,7 +36,12 @@ export class UserRefCircleController {
     @Body() request: WithdrawUserRefCircleRequest,
   ): Promise<ActionResponse> {
     try {
-      await this.userRefCircleService.withdrawCircle(userId, request.circleId);
+      await this.cacheService.executeWithLock(
+        `lock:withdraw-ref:${userId}`,
+        5000,
+        async () =>
+          this.userRefCircleService.withdrawCircle(userId, request.circleId),
+      );
       return {
         success: true,
         message: '',

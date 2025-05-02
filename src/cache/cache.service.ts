@@ -18,7 +18,7 @@ export class CacheService {
     fn: () => Promise<R>,
   ): Promise<R> {
     if (!(await this.acquireLock(lockKey, releaseTime))) {
-      throw new Error('Failed to acquire lock');
+      throw new Error(`Failed to acquire lock ${lockKey} for ${releaseTime}s`);
     }
     try {
       return await fn();
@@ -34,7 +34,7 @@ export class CacheService {
     const acquired = await this.redis.set(
       lockKey,
       '1',
-      'EX',
+      'PX',
       releaseTime,
       'NX',
     );

@@ -7,6 +7,7 @@ import { SettingModule } from '@/setting/setting.module';
 import { BullModule } from '@nestjs/bullmq';
 import { UserRefCircleController } from '@/referral/user-ref-circle.controller';
 import { UserRefCircleListener } from '@/referral/user-ref-circle.listener';
+import { CacheModule } from '@/cache/cache.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserRefCircleListener } from '@/referral/user-ref-circle.listener';
     BullModule.registerQueue({
       name: 'withdraw',
     }),
+    CacheModule,
   ],
   controllers: [UserRefCircleController],
   providers: [UserRefCircleService, UserRefCircleListener],
