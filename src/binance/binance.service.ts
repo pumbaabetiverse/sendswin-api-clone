@@ -22,6 +22,9 @@ export class BinanceService {
       where: {
         status: BinanceAccountStatus.ACTIVE,
       },
+      order: {
+        id: 'ASC',
+      },
     });
   }
 
@@ -41,17 +44,6 @@ export class BinanceService {
 
     const randomIndex = Math.floor(Math.random() * accounts.length);
     return accounts[randomIndex];
-  }
-
-  async getPayTradeHistoryActiveAccounts(): Promise<
-    PayTradeHistoryResponse['data']
-  > {
-    const accounts = await this.getActiveBinanceAccounts();
-    const allHistory: PayTradeHistoryResponse['data'] = [];
-    for (const account of accounts) {
-      allHistory.push(...(await this.getPayTradeHistory(account)));
-    }
-    return allHistory;
   }
 
   async getPayTradeHistory(

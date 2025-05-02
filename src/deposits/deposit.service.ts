@@ -26,6 +26,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
+import { BinanceAccount } from '@/binance/binance.entity';
 
 @Injectable()
 export class DepositsService {
@@ -58,107 +59,6 @@ export class DepositsService {
       take: limit,
     });
     return buildPaginateResponse(items, total, page, limit);
-  }
-
-  async getUserHistory(userId: number) {
-    return this.depositsRepository.find({
-      where: {
-        userId: userId,
-      },
-      order: {
-        transactionTime: 'DESC',
-      },
-      take: 10,
-    });
-  }
-
-  async processPayTradeHistory(): Promise<void> {
-    try {
-      const accounts = await this.binanceService.getActiveBinanceAccounts();
-
-      // Process all accounts in parallel
-      const processAccountPromises = accounts.map(async (account) => {
-        try {
-          const data = await this.binanceService.getPayTradeHistory(account);
-          let accountDepositsCount = 0;
-
-          for (const item of data) {
-            try {
-              // console.log(item.payerInfo);
-              const amount = parseFloat(item.amount);
-              // Check if this is a C2C transaction, with amount between 10 and 50, and the currency is USDT
-              if (
-                item.orderType === 'C2C' &&
-                item.currency === 'USDT' &&
-                amount >= 0
-              ) {
-                // Check if a deposit with this orderId already exists
-                const existingDeposit = await this.depositsRepository.findOneBy(
-                  {
-                    orderId: item.orderId,
-                  },
-                );
-
-                if (!existingDeposit) {
-                  // Add to the deposit process queue
-                  await this.depositProcessQueue.add(
-                    'process-deposit',
-                    {
-                      item,
-                      account,
-                    },
-                    {
-                      removeOnComplete: true,
-                      removeOnFail: true,
-                    },
-                  );
-                  accountDepositsCount++;
-                }
-              }
-            } catch (error) {
-              if (error instanceof Error) {
-                this.logger.error(
-                  `Error processing pay trade history item: ${error.message}`,
-                  error.stack,
-                );
-              }
-            }
-          }
-
-          return accountDepositsCount;
-        } catch (error) {
-          if (error instanceof Error) {
-            this.logger.error(
-              `Error processing account ${account.binanceUsername}: ${error.message}`,
-              error.stack,
-            );
-          }
-          return 0;
-        }
-      });
-
-      // Wait for all account processing to complete
-      const depositCounts = await Promise.all(processAccountPromises);
-
-      // Sum up all new deposits
-      const newDepositsCount = depositCounts.reduce(
-        (sum, count) => sum + count,
-        0,
-      );
-
-      if (newDepositsCount > 0) {
-        this.logger.log(`Added ${newDepositsCount} new deposits`);
-      } else {
-        this.logger.log('No new qualifying deposits found');
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error processing pay trade history: ${error.message}`,
-          error.stack,
-        );
-      }
-    }
   }
 
   determineOddEvenResult(
@@ -361,6 +261,74 @@ export class DepositsService {
       if (error instanceof Error) {
         this.logger.error(
           `Error processing deposit item: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+  }
+
+  // Process trade history for a single account
+  async processSingleAccountTradeHistory(
+    account: BinanceAccount,
+  ): Promise<void> {
+    try {
+      // Get pay trade history for this account
+      const data = await this.binanceService.getPayTradeHistory(account);
+
+      // Process each item
+      let processedCount = 0;
+
+      for (const item of data) {
+        try {
+          const amount = parseFloat(item.amount);
+
+          // Check if this is a C2C transaction, with amount >= 0, and the currency is USDT
+          if (
+            item.orderType === 'C2C' &&
+            item.currency === 'USDT' &&
+            amount >= 0
+          ) {
+            // Check if a deposit with this orderId already exists
+            const existingDeposit = await this.depositsRepository.findOneBy({
+              orderId: item.orderId,
+            });
+
+            if (!existingDeposit) {
+              // Add to the deposit process queue
+              await this.depositProcessQueue.add(
+                'process-deposit',
+                {
+                  item,
+                  account,
+                },
+                {
+                  removeOnComplete: true,
+                  removeOnFail: true,
+                },
+              );
+
+              processedCount++;
+            }
+          }
+        } catch (error) {
+          if (error instanceof Error) {
+            this.logger.error(
+              `Error processing pay trade history item for account ${account.id}: ${error.message}`,
+              error.stack,
+            );
+          }
+        }
+      }
+
+      if (processedCount > 0) {
+        this.logger.log(
+          `Processed ${processedCount} items for account ${account.id}`,
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `Error processing trade history for account ${account.id}: ${error.message}`,
           error.stack,
         );
       }
