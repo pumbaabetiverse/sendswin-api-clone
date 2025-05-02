@@ -30,7 +30,6 @@ import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 import { BinanceAccount } from '@/binance/binance.entity';
-import { MurLockService } from 'murlock';
 
 @Injectable()
 export class DepositsService {
@@ -45,7 +44,6 @@ export class DepositsService {
     @InjectQueue('withdraw')
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
-    private murLockService: MurLockService,
   ) {}
 
   async historyPagination(
@@ -112,162 +110,154 @@ export class DepositsService {
     }
   }
 
-  async processDepositItem({
-    item,
-    account,
-  }: DepositProcessQueueDto): Promise<void> {
+  async processDepositItem(data: DepositProcessQueueDto): Promise<void> {
     try {
-      await this.murLockService.runWithLock(
-        `lock:deposit:${item.orderId}`,
-        3000,
-        async () => {
-          const amount = parseFloat(item.amount);
+      const { item, account } = data;
+      const amount = parseFloat(item.amount);
 
-          const existingDeposit = await this.depositsRepository.findOneBy({
-            orderId: item.orderId,
-          });
+      const existingDeposit = await this.depositsRepository.findOneBy({
+        orderId: item.orderId,
+      });
 
-          if (existingDeposit) {
-            this.logger.log(
-              `Deposit with orderId ${item.orderId} already exists, skipping processing`,
-            );
-            return;
-          }
+      if (existingDeposit) {
+        this.logger.log(
+          `Deposit with orderId ${item.orderId} already exists, skipping processing`,
+        );
+        return;
+      }
 
-          // Create a new deposit
-          const deposit = new Deposit();
-          deposit.uid = item.uid;
-          deposit.counterpartyId = item.counterpartyId;
-          deposit.orderId = item.orderId;
-          deposit.note = item.note;
-          deposit.orderType = item.orderType;
-          deposit.transactionId = item.transactionId;
-          deposit.transactionTime = new Date(item.transactionTime);
-          deposit.amount = amount;
-          deposit.currency = item.currency;
-          deposit.walletType = item.walletType;
-          deposit.totalPaymentFee = item.totalPaymentFee;
-          deposit.option = account.option;
+      // Create a new deposit
+      const deposit = new Deposit();
+      deposit.uid = item.uid;
+      deposit.counterpartyId = item.counterpartyId;
+      deposit.orderId = item.orderId;
+      deposit.note = item.note;
+      deposit.orderType = item.orderType;
+      deposit.transactionId = item.transactionId;
+      deposit.transactionTime = new Date(item.transactionTime);
+      deposit.amount = amount;
+      deposit.currency = item.currency;
+      deposit.walletType = item.walletType;
+      deposit.totalPaymentFee = item.totalPaymentFee;
+      deposit.option = account.option;
 
-          if (!item.payerInfo?.name) {
-            await this.depositsRepository.save(deposit);
-            return;
-          }
+      if (!item.payerInfo?.name) {
+        await this.depositsRepository.save(deposit);
+        return;
+      }
 
-          deposit.payerUsername = item.payerInfo.name;
+      deposit.payerUsername = item.payerInfo.name;
 
-          const user = await this.usersService.findByBinanceUsername(
-            item.payerInfo.name,
-          );
-
-          if (!user) {
-            deposit.result = DepositResult.VOID;
-            await this.depositsRepository.save(deposit);
-            return;
-          }
-
-          deposit.userId = user.id;
-
-          if (!user.walletAddress) {
-            deposit.result = DepositResult.VOID;
-            await this.depositsRepository.save(deposit);
-            return;
-          }
-
-          if (
-            account.option === DepositOption.ODD ||
-            account.option === DepositOption.EVEN
-          ) {
-            const minAmount = await this.settingService.getFloatSetting(
-              SettingKey.ODD_EVEN_MIN_AMOUNT,
-              0.5,
-            );
-            const maxAmount = await this.settingService.getFloatSetting(
-              SettingKey.ODD_EVEN_MAX_AMOUNT,
-              50,
-            );
-
-            if (amount >= minAmount && amount <= maxAmount) {
-              deposit.result = this.determineOddEvenResult(
-                account.option,
-                item.orderId,
-              );
-            } else {
-              deposit.result = DepositResult.VOID;
-            }
-
-            if (deposit.result == DepositResult.WIN) {
-              const multiplier = await this.settingService.getFloatSetting(
-                SettingKey.ODD_EVEN_MULTIPLIER,
-                1.95,
-              );
-              deposit.payout = amount * multiplier;
-            }
-          } else if (account.option == DepositOption.LUCKY_NUMBER) {
-            const minAmount = await this.settingService.getFloatSetting(
-              SettingKey.LUCKY_NUMBER_MIN_AMOUNT,
-              0.5,
-            );
-            const maxAmount = await this.settingService.getFloatSetting(
-              SettingKey.LUCKY_NUMBER_MAX_AMOUNT,
-              10,
-            );
-
-            if (amount >= minAmount && amount <= maxAmount) {
-              deposit.result = this.determineLuckyNumberResult(item.orderId);
-            } else {
-              deposit.result = DepositResult.VOID;
-            }
-
-            if (deposit.result == DepositResult.WIN) {
-              const multiplier = await this.settingService.getFloatSetting(
-                SettingKey.LUCKY_NUMBER_MULTIPLIER,
-                300,
-              );
-              deposit.payout = amount * multiplier;
-            }
-          }
-
-          await this.depositsRepository.insert(deposit);
-
-          if (user.parentId) {
-            this.eventEmitter.emit(EventName.REF_CONTRIBUTE, {
-              userId: user.id,
-              parentId: user.parentId,
-              amount: deposit.amount,
-              createdAt: new Date(),
-              depositOption: account.option,
-              depositResult: deposit.result,
-            } satisfies RefContributeEvent);
-          }
-
-          if (user.chatId) {
-            this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
-              userChatId: user.chatId,
-              orderId: deposit.orderId,
-              result: deposit.result,
-              amount: deposit.amount,
-              payout: deposit.payout,
-              option: account.option,
-            } satisfies TelegramNewGameEvent);
-          }
-
-          if (deposit.result == DepositResult.WIN) {
-            await this.withdrawQueue.add(
-              'withdraw',
-              {
-                userId: user.id,
-                payout: deposit.payout,
-                depositOrderId: deposit.orderId,
-              },
-              {
-                removeOnComplete: true,
-                removeOnFail: true,
-              },
-            );
-          }
-        },
+      const user = await this.usersService.findByBinanceUsername(
+        item.payerInfo.name,
       );
+
+      if (!user) {
+        deposit.result = DepositResult.VOID;
+        await this.depositsRepository.save(deposit);
+        return;
+      }
+
+      deposit.userId = user.id;
+
+      if (!user.walletAddress) {
+        deposit.result = DepositResult.VOID;
+        await this.depositsRepository.save(deposit);
+        return;
+      }
+
+      if (
+        account.option === DepositOption.ODD ||
+        account.option === DepositOption.EVEN
+      ) {
+        const minAmount = await this.settingService.getFloatSetting(
+          SettingKey.ODD_EVEN_MIN_AMOUNT,
+          0.5,
+        );
+        const maxAmount = await this.settingService.getFloatSetting(
+          SettingKey.ODD_EVEN_MAX_AMOUNT,
+          50,
+        );
+
+        if (amount >= minAmount && amount <= maxAmount) {
+          deposit.result = this.determineOddEvenResult(
+            account.option,
+            item.orderId,
+          );
+        } else {
+          deposit.result = DepositResult.VOID;
+        }
+
+        if (deposit.result == DepositResult.WIN) {
+          const multiplier = await this.settingService.getFloatSetting(
+            SettingKey.ODD_EVEN_MULTIPLIER,
+            1.95,
+          );
+          deposit.payout = amount * multiplier;
+        }
+      } else if (account.option == DepositOption.LUCKY_NUMBER) {
+        const minAmount = await this.settingService.getFloatSetting(
+          SettingKey.LUCKY_NUMBER_MIN_AMOUNT,
+          0.5,
+        );
+        const maxAmount = await this.settingService.getFloatSetting(
+          SettingKey.LUCKY_NUMBER_MAX_AMOUNT,
+          10,
+        );
+
+        if (amount >= minAmount && amount <= maxAmount) {
+          deposit.result = this.determineLuckyNumberResult(item.orderId);
+        } else {
+          deposit.result = DepositResult.VOID;
+        }
+
+        if (deposit.result == DepositResult.WIN) {
+          const multiplier = await this.settingService.getFloatSetting(
+            SettingKey.LUCKY_NUMBER_MULTIPLIER,
+            300,
+          );
+          deposit.payout = amount * multiplier;
+        }
+      }
+
+      await this.depositsRepository.insert(deposit);
+
+      if (user.parentId) {
+        this.eventEmitter.emit(EventName.REF_CONTRIBUTE, {
+          userId: user.id,
+          parentId: user.parentId,
+          amount: deposit.amount,
+          createdAt: new Date(),
+          depositOption: account.option,
+          depositResult: deposit.result,
+        } satisfies RefContributeEvent);
+      }
+
+      if (user.chatId) {
+        this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
+          userChatId: user.chatId,
+          orderId: deposit.orderId,
+          result: deposit.result,
+          amount: deposit.amount,
+          payout: deposit.payout,
+          option: account.option,
+        } satisfies TelegramNewGameEvent);
+      }
+
+      if (deposit.result == DepositResult.WIN) {
+        await this.withdrawQueue.add(
+          'withdraw',
+          {
+            userId: user.id,
+            payout: deposit.payout,
+            depositOrderId: deposit.orderId,
+          },
+          {
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
+        );
+      }
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(

@@ -52,7 +52,6 @@
     "fastify-plugin": "5.0.1",
     "fastq": "1.19.1",
     "https-proxy-agent": "^7.0.6",
-    "murlock": "^4.0.0",
     "nestjs-telegraf": "^2.8.1",
     "pg": "^8.15.1",
     "qs": "6.14.0",
