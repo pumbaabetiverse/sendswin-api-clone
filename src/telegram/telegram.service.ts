@@ -37,10 +37,12 @@ export class TelegramService {
 
   async sendNewGameResultMessage(payload: TelegramNewGameEvent): Promise<void> {
     try {
-      let optionDisplay = 'Ⓞ ODD';
+      let optionDisplay = '';
 
-      if (payload.option == DepositOption.UNDER) {
-        optionDisplay = 'Ⓔ EVEN';
+      if (payload.option == DepositOption.EVEN) {
+        optionDisplay = '🟢🟢 EVEN';
+      } else if (payload.option == DepositOption.ODD) {
+        optionDisplay = '🔴 ODD';
       } else if (payload.option == DepositOption.LUCKY_NUMBER) {
         optionDisplay = '🍀 GOLDEN 7';
       }
