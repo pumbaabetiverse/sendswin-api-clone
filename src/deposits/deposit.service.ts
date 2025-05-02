@@ -31,6 +31,7 @@ import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
 import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 import { BinanceAccount } from '@/binance/binance.entity';
 import { CacheService } from '@/cache/cache.service';
+import { User } from '@/users/user.entity';
 
 @Injectable()
 export class DepositsService {
@@ -55,265 +56,351 @@ export class DepositsService {
     const { limit, skip, page } = composePagination(pagination);
     const [items, total] = await this.depositsRepository.findAndCount({
       where: options,
-      order: {
-        transactionTime: 'DESC',
-      },
+      order: { transactionTime: 'DESC' },
       skip,
       take: limit,
     });
     return buildPaginateResponse(items, total, page, limit);
   }
 
-  determineOddEvenResult(
+  async processDepositItem(data: DepositProcessQueueDto): Promise<void> {
+    try {
+      const { item, account } = data;
+
+      // Skip if deposit already exists
+      if (await this.isDepositAlreadyProcessed(item.orderId)) {
+        return;
+      }
+
+      // Create and populate deposit record
+      const deposit = this.createDepositRecord(item, account);
+
+      // Process deposit based on payer information
+      if (!item.payerInfo?.name) {
+        await this.saveDeposit(deposit);
+        return;
+      }
+
+      deposit.payerUsername = item.payerInfo.name;
+
+      // Find user and validate
+      const user = await this.usersService.findByBinanceUsername(
+        item.payerInfo.name,
+      );
+      if (!this.isValidUserForDeposit(user, deposit)) {
+        await this.saveDeposit(deposit);
+        return;
+      }
+
+      // Calculate game result and update deposit
+      await this.calculateAndUpdateGameResult(deposit);
+
+      // Save deposit and process-related actions
+      await this.saveDeposit(deposit);
+
+      // Process referral commission
+      this.addReferralContribution(deposit, user!);
+
+      // Send a new game message on Telegram notification
+      this.sendTelegramNotification(deposit, user!);
+
+      // Add withdrawal winnings to the queue
+      await this.addWinningWithdrawal(deposit, user!);
+    } catch (error) {
+      this.handleError(error, 'Error processing deposit item');
+    }
+  }
+
+  async processSingleAccountTradeHistory(
+    account: BinanceAccount,
+  ): Promise<void> {
+    try {
+      const tradeHistory =
+        await this.binanceService.getPayTradeHistory(account);
+      const depositItems = tradeHistory.filter((item) =>
+        this.isDepositHistory(item),
+      );
+
+      await Promise.all(
+        depositItems.map((item) =>
+          this.processDepositItemWithLock(item, account),
+        ),
+      );
+    } catch (error) {
+      this.handleError(
+        error,
+        `Error processing trade history for account ${account.id}`,
+      );
+    }
+  }
+
+  private determineOddEvenResult(
     option: DepositOption,
     transactionId: string,
   ): DepositResult {
     if (!transactionId) {
       return DepositResult.VOID;
     }
-
-    // Get the last character of the transaction ID
-    const sumDigit =
-      parseInt(transactionId.charAt(transactionId.length - 1), 10) +
-      parseInt(transactionId.charAt(transactionId.length - 2), 10) +
-      parseInt(transactionId.charAt(transactionId.length - 3), 10);
+    // Calculate sums of last 3 digits
+    const sumDigit = this.calculateSumOfLastDigits(transactionId, 3);
 
     // Check if the sum digit is a number
     if (isNaN(sumDigit)) {
       this.logger.warn(
-        `Last character of transactionId is not a digit: ${transactionId}`,
+        `Last characters of transactionId are not digits: ${transactionId}`,
       );
       return DepositResult.VOID;
     }
 
-    // Determine if the last digit is odd or even
-    const isOdd = sumDigit % 2 == 1;
+    const isOdd = sumDigit % 2 === 1;
+    const userSelectedOdd = option === DepositOption.ODD;
 
-    const isEven = sumDigit % 2 == 0;
-
-    // Determine if the user wins based on their option and the outcome
-    if (option == DepositOption.ODD && isOdd) {
-      return DepositResult.WIN;
-    } else if (option === DepositOption.EVEN && isEven) {
-      return DepositResult.WIN;
-    } else {
-      return DepositResult.LOSE;
-    }
+    return (userSelectedOdd && isOdd) || (!userSelectedOdd && !isOdd)
+      ? DepositResult.WIN
+      : DepositResult.LOSE;
   }
 
-  determineLuckyNumberResult(transactionId: string): DepositResult {
+  private determineLuckyNumberResult(transactionId: string): DepositResult {
     if (!transactionId) {
       return DepositResult.VOID;
     }
-    if (transactionId.endsWith('7')) {
-      return DepositResult.WIN;
-    } else {
-      return DepositResult.LOSE;
-    }
+    return transactionId.endsWith('7') ? DepositResult.WIN : DepositResult.LOSE;
   }
 
-  async processDepositItem(data: DepositProcessQueueDto): Promise<void> {
-    try {
-      const { item, account } = data;
-      const amount = parseFloat(item.amount);
-
-      const existingDeposit = await this.depositsRepository.findOneBy({
-        orderId: item.orderId,
-      });
-
-      if (existingDeposit) {
-        this.logger.log(
-          `Deposit with orderId ${item.orderId} already exists, skipping processing`,
-        );
-        return;
-      }
-
-      // Create a new deposit
-      const deposit = new Deposit();
-      deposit.uid = item.uid;
-      deposit.counterpartyId = item.counterpartyId;
-      deposit.orderId = item.orderId;
-      deposit.note = item.note;
-      deposit.orderType = item.orderType;
-      deposit.transactionId = item.transactionId;
-      deposit.transactionTime = new Date(item.transactionTime);
-      deposit.amount = amount;
-      deposit.currency = item.currency;
-      deposit.walletType = item.walletType;
-      deposit.totalPaymentFee = item.totalPaymentFee;
-      deposit.option = account.option;
-
-      if (!item.payerInfo?.name) {
-        await this.depositsRepository.save(deposit);
-        return;
-      }
-
-      deposit.payerUsername = item.payerInfo.name;
-
-      const user = await this.usersService.findByBinanceUsername(
-        item.payerInfo.name,
-      );
-
-      if (!user) {
-        deposit.result = DepositResult.VOID;
-        await this.depositsRepository.save(deposit);
-        return;
-      }
-
-      deposit.userId = user.id;
-
-      if (!user.walletAddress) {
-        deposit.result = DepositResult.VOID;
-        await this.depositsRepository.save(deposit);
-        return;
-      }
-
-      if (
-        account.option === DepositOption.ODD ||
-        account.option === DepositOption.EVEN
-      ) {
-        const minAmount = await this.settingService.getFloatSetting(
-          SettingKey.ODD_EVEN_MIN_AMOUNT,
-          0.5,
-        );
-        const maxAmount = await this.settingService.getFloatSetting(
-          SettingKey.ODD_EVEN_MAX_AMOUNT,
-          50,
-        );
-
-        if (amount >= minAmount && amount <= maxAmount) {
-          deposit.result = this.determineOddEvenResult(
-            account.option,
-            item.orderId,
-          );
-        } else {
-          deposit.result = DepositResult.VOID;
-        }
-
-        if (deposit.result == DepositResult.WIN) {
-          const multiplier = await this.settingService.getFloatSetting(
-            SettingKey.ODD_EVEN_MULTIPLIER,
-            1.95,
-          );
-          deposit.payout = amount * multiplier;
-        }
-      } else if (account.option == DepositOption.LUCKY_NUMBER) {
-        const minAmount = await this.settingService.getFloatSetting(
-          SettingKey.LUCKY_NUMBER_MIN_AMOUNT,
-          0.5,
-        );
-        const maxAmount = await this.settingService.getFloatSetting(
-          SettingKey.LUCKY_NUMBER_MAX_AMOUNT,
-          10,
-        );
-
-        if (amount >= minAmount && amount <= maxAmount) {
-          deposit.result = this.determineLuckyNumberResult(item.orderId);
-        } else {
-          deposit.result = DepositResult.VOID;
-        }
-
-        if (deposit.result == DepositResult.WIN) {
-          const multiplier = await this.settingService.getFloatSetting(
-            SettingKey.LUCKY_NUMBER_MULTIPLIER,
-            300,
-          );
-          deposit.payout = amount * multiplier;
-        }
-      }
-
-      await this.depositsRepository.insert(deposit);
-
-      if (user.parentId) {
-        this.eventEmitter.emit(EventName.REF_CONTRIBUTE, {
-          userId: user.id,
-          parentId: user.parentId,
-          amount: deposit.amount,
-          createdAt: new Date(),
-          depositOption: account.option,
-          depositResult: deposit.result,
-        } satisfies RefContributeEvent);
-      }
-
-      if (user.chatId) {
-        this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
-          userChatId: user.chatId,
-          orderId: deposit.orderId,
-          result: deposit.result,
-          amount: deposit.amount,
-          payout: deposit.payout,
-          option: account.option,
-        } satisfies TelegramNewGameEvent);
-      }
-
-      if (deposit.result == DepositResult.WIN) {
-        await this.withdrawQueue.add(
-          'withdraw',
-          {
-            userId: user.id,
-            payout: deposit.payout,
-            depositOrderId: deposit.orderId,
-          },
-          {
-            removeOnComplete: true,
-            removeOnFail: true,
-          },
-        );
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error processing deposit item: ${error.message}`,
-          error.stack,
-        );
-      }
-    }
-  }
-
-  // Process trade history for a single account
-  async processSingleAccountTradeHistory(
+  private async processDepositItemWithLock(
+    item: PayTradeHistoryItem,
     account: BinanceAccount,
   ): Promise<void> {
     try {
-      // Get pay trade history for this account
-      const data = await this.binanceService.getPayTradeHistory(account);
-
-      await Promise.all(
-        data
-          .filter((item) => this.isDepositHistory(item))
-          .map(async (item) => {
-            try {
-              await this.cacheService.executeWithLock(
-                `lock:deposit:${item.orderId}`,
-                3000,
-                async () =>
-                  await this.processDepositItem({
-                    item,
-                    account,
-                  }),
-              );
-            } catch (error) {
-              if (error instanceof Error) {
-                this.logger.error(error.message, error.stack);
-              }
-            }
-          }),
+      await this.cacheService.executeWithLock(
+        `lock:deposit:${item.orderId}`,
+        3000,
+        async () => await this.processDepositItem({ item, account }),
       );
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error processing trade history for account ${account.id}: ${error.message}`,
-          error.stack,
-        );
-      }
+      this.handleError(error);
     }
   }
 
-  private isDepositHistory(item: PayTradeHistoryItem) {
+  private isDepositHistory(item: PayTradeHistoryItem): boolean {
     return (
-      item.orderType == 'C2C' &&
-      item.currency == 'USDT' &&
+      item.orderType === 'C2C' &&
+      item.currency === 'USDT' &&
       parseFloat(item.amount) >= 0
     );
+  }
+
+  private async isDepositAlreadyProcessed(orderId: string): Promise<boolean> {
+    const existingDeposit = await this.depositsRepository.findOneBy({
+      orderId,
+    });
+
+    if (existingDeposit) {
+      this.logger.log(
+        `Deposit with orderId ${orderId} already exists, skipping processing`,
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  private createDepositRecord(
+    item: PayTradeHistoryItem,
+    account: BinanceAccount,
+  ): Deposit {
+    const deposit = new Deposit();
+    const amount = parseFloat(item.amount);
+
+    deposit.uid = item.uid;
+    deposit.counterpartyId = item.counterpartyId;
+    deposit.orderId = item.orderId;
+    deposit.note = item.note;
+    deposit.orderType = item.orderType;
+    deposit.transactionId = item.transactionId;
+    deposit.transactionTime = new Date(item.transactionTime);
+    deposit.amount = amount;
+    deposit.currency = item.currency;
+    deposit.walletType = item.walletType;
+    deposit.totalPaymentFee = item.totalPaymentFee;
+    deposit.option = account.option;
+    deposit.payout = 0;
+    deposit.result = DepositResult.VOID;
+
+    return deposit;
+  }
+
+  private isValidUserForDeposit(user: User | null, deposit: Deposit): boolean {
+    if (!user) {
+      deposit.result = DepositResult.VOID;
+      return false;
+    }
+
+    deposit.userId = user.id;
+
+    if (!user.walletAddress) {
+      deposit.result = DepositResult.VOID;
+      return false;
+    }
+
+    return true;
+  }
+
+  private async saveDeposit(deposit: Deposit): Promise<void> {
+    await this.depositsRepository.insert(deposit);
+  }
+
+  private async calculateAndUpdateGameResult(deposit: Deposit): Promise<void> {
+    const { result, payout } = await this.calcGameResultAndPayout(
+      deposit.option!,
+      deposit.amount,
+      deposit.orderId,
+    );
+
+    deposit.result = result;
+    deposit.payout = payout;
+  }
+
+  private addReferralContribution(deposit: Deposit, user: User): void {
+    if (user.parentId) {
+      this.eventEmitter.emit(EventName.REF_CONTRIBUTE, {
+        userId: user.id,
+        parentId: user.parentId,
+        amount: deposit.amount,
+        createdAt: new Date(),
+        depositOption: deposit.option!,
+        depositResult: deposit.result,
+      } satisfies RefContributeEvent);
+    }
+  }
+
+  private sendTelegramNotification(deposit: Deposit, user: User): void {
+    if (user.chatId) {
+      this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
+        userChatId: user.chatId,
+        orderId: deposit.orderId,
+        result: deposit.result,
+        amount: deposit.amount,
+        payout: deposit.payout,
+        option: deposit.option!,
+      } satisfies TelegramNewGameEvent);
+    }
+  }
+
+  private async addWinningWithdrawal(
+    deposit: Deposit,
+    user: User,
+  ): Promise<void> {
+    if (deposit.result === DepositResult.WIN) {
+      await this.withdrawQueue.add(
+        'withdraw',
+        {
+          userId: user.id,
+          payout: deposit.payout,
+          depositOrderId: deposit.orderId,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
+    }
+  }
+
+  private calculateSumOfLastDigits(str: string, count: number): number {
+    let sum = 0;
+    for (let i = 0; i < count; i++) {
+      const digit = parseInt(str.charAt(str.length - 1 - i), 10);
+      if (isNaN(digit)) return NaN;
+      sum += digit;
+    }
+    return sum;
+  }
+
+  private async calcGameResultAndPayout(
+    option: DepositOption,
+    amount: number,
+    orderId: string,
+  ): Promise<{ result: DepositResult; payout: number }> {
+    // Default values
+    const defaultResult = {
+      result: DepositResult.VOID,
+      payout: 0,
+    };
+
+    // Determine game type
+    const gameType = this.determineGameType(option);
+    if (!gameType) return defaultResult;
+
+    // Check amount limits
+    const { minAmount, maxAmount } = await this.getAmountLimits(gameType);
+    if (amount < minAmount || amount > maxAmount) return defaultResult;
+
+    // Determine result
+    const result = this.determineGameResult(gameType, option, orderId);
+
+    // Calculate payout if win
+    let payout = 0;
+    if (result === DepositResult.WIN) {
+      const multiplier = await this.getMultiplier(gameType);
+      payout = amount * multiplier;
+    }
+
+    return { result, payout };
+  }
+
+  private determineGameType(
+    option: DepositOption,
+  ): 'ODD_EVEN' | 'LUCKY_NUMBER' | null {
+    if (option === DepositOption.ODD || option === DepositOption.EVEN) {
+      return 'ODD_EVEN';
+    } else if (option === DepositOption.LUCKY_NUMBER) {
+      return 'LUCKY_NUMBER';
+    }
+    return null;
+  }
+
+  private async getAmountLimits(
+    gameType: 'ODD_EVEN' | 'LUCKY_NUMBER',
+  ): Promise<{ minAmount: number; maxAmount: number }> {
+    const minAmount = await this.settingService.getFloatSetting(
+      SettingKey[`${gameType}_MIN_AMOUNT`],
+      gameType === 'ODD_EVEN' ? 0.5 : 0.5,
+    );
+
+    const maxAmount = await this.settingService.getFloatSetting(
+      SettingKey[`${gameType}_MAX_AMOUNT`],
+      gameType === 'ODD_EVEN' ? 50 : 10,
+    );
+
+    return { minAmount, maxAmount };
+  }
+
+  private determineGameResult(
+    gameType: string,
+    option: DepositOption,
+    orderId: string,
+  ): DepositResult {
+    return gameType === 'ODD_EVEN'
+      ? this.determineOddEvenResult(option, orderId)
+      : this.determineLuckyNumberResult(orderId);
+  }
+
+  private async getMultiplier(
+    gameType: 'ODD_EVEN' | 'LUCKY_NUMBER',
+  ): Promise<number> {
+    return await this.settingService.getFloatSetting(
+      SettingKey[`${gameType}_MULTIPLIER`],
+      gameType === 'ODD_EVEN' ? 1.95 : 300,
+    );
+  }
+
+  private handleError(error: unknown, message?: string): void {
+    if (error instanceof Error) {
+      this.logger.error(
+        message ? `${message}: ${error.message}` : error.message,
+        error.stack,
+      );
+    }
   }
 }
