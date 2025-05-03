@@ -11,6 +11,7 @@ import {
 
 export enum WithdrawStatus {
   PENDING = 'pending',
+  PROCESSING = 'processing',
   SUCCESS = 'success',
   FAIL = 'fail',
 }
@@ -22,6 +23,9 @@ export class Withdraw {
 
   @Column({ unique: true })
   depositOrderId: string;
+
+  @Column({ nullable: true, unique: true })
+  sourceId?: string;
 
   @Column()
   userId: number;

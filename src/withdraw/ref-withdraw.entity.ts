@@ -9,6 +9,7 @@ import {
 
 export enum WithdrawStatus {
   PENDING = 'pending',
+  PROCESSING = 'processing',
   SUCCESS = 'success',
   FAIL = 'fail',
 }
