@@ -24,19 +24,11 @@ export class WithdrawConsumer extends WorkerHost {
         'false',
       );
       if (isEnable == 'true' || isEnable == '1') {
-        if (job.data.depositOrderId) {
-          await this.withdrawService.processWithdrawOnChain(
-            job.data.userId,
-            job.data.payout,
-            job.data.depositOrderId,
-          );
-        } else if (job.data.userRefCircleId) {
-          await this.withdrawService.processRefWithdrawOnChain(
-            job.data.userId,
-            job.data.payout,
-            job.data.userRefCircleId,
-          );
-        }
+        await this.withdrawService.processWithdrawOnChain(
+          job.data.userId,
+          job.data.payout,
+          job.data.sourceId,
+        );
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

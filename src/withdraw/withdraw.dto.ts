@@ -1,6 +1,5 @@
 export class WithdrawRequestQueueDto {
   userId: number;
   payout: number;
-  depositOrderId?: string;
-  userRefCircleId?: number;
+  sourceId: string;
 }

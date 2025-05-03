@@ -16,6 +16,12 @@ export enum WithdrawStatus {
   FAIL = 'fail',
 }
 
+export enum WithdrawType {
+  GAME = 'game',
+  REFERRAL = 'referral',
+  OTHER = 'other',
+}
+
 @Entity('withdraws')
 export class Withdraw {
   @PrimaryGeneratedColumn()
@@ -26,6 +32,9 @@ export class Withdraw {
 
   @Column()
   userId: number;
+
+  @Column({ default: WithdrawType.GAME, enum: WithdrawType, type: 'enum' })
+  type: WithdrawType;
 
   @NumericColumn({
     round: 6,

@@ -16,6 +16,7 @@ import {
 } from '@/common/dto/pagination.dto';
 import { composePagination } from '@/common/pagination';
 import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
+import { WithdrawType } from '@/withdraw/withdraw.entity';
 
 @Injectable()
 export class UserRefCircleService {
@@ -176,7 +177,7 @@ export class UserRefCircleService {
     await this.withdrawQueue.add('withdraw-ref', {
       userId,
       payout: userRefCircle.earnFromChild,
-      userRefCircleId: userRefCircle.id,
+      sourceId: `${WithdrawType.REFERRAL}_${userRefCircle.id}`,
     });
   }
 

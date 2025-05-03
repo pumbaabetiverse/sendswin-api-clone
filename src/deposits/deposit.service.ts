@@ -33,6 +33,7 @@ import { BinanceAccount } from '@/binance/binance.entity';
 import { CacheService } from '@/cache/cache.service';
 import { User } from '@/users/user.entity';
 import { err, ok, Result } from 'neverthrow';
+import { WithdrawType } from '@/withdraw/withdraw.entity';
 
 @Injectable()
 export class DepositsService {
@@ -317,7 +318,7 @@ export class DepositsService {
         {
           userId: user.id,
           payout: deposit.payout,
-          depositOrderId: deposit.orderId,
+          sourceId: `${WithdrawType.GAME}_${deposit.orderId}`,
         },
         {
           removeOnComplete: true,

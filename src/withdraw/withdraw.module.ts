@@ -15,11 +15,10 @@ import { AdminWalletWithdrawService } from './services/admin.wallet-withdraw.ser
 import { AdminWalletWithdrawController } from './controllers/admin.wallet-withdraw.controller';
 import { SettingModule } from '@/setting/setting.module';
 import { WalletWithdrawScheduler } from '@/withdraw/wallet-withdraw.scheduler';
-import { RefWithdraw } from '@/withdraw/ref-withdraw.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Withdraw, WalletWithdraw, RefWithdraw]),
+    TypeOrmModule.forFeature([Withdraw, WalletWithdraw]),
     UsersModule,
     BlockchainModule,
     forwardRef(() => TelegramModule),
