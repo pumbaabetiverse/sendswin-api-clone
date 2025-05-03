@@ -22,10 +22,7 @@ export class Withdraw {
   id: number;
 
   @Column({ unique: true })
-  depositOrderId: string;
-
-  @Column({ nullable: true, unique: true })
-  sourceId?: string;
+  sourceId: string;
 
   @Column()
   userId: number;

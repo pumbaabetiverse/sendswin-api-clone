@@ -33,7 +33,9 @@ export class WithdrawService {
       throw new Error('User does not have a wallet address');
     }
 
-    if (await this.withdrawRepository.findOneBy({ depositOrderId })) {
+    const sourceId = `deposit_${depositOrderId}`;
+
+    if (await this.withdrawRepository.findOneBy({ sourceId })) {
       throw new Error('Withdraw already processed');
     }
 
@@ -67,7 +69,7 @@ export class WithdrawService {
           payout,
           currency: BlockchainToken.USDT,
           walletAddress: user.walletAddress,
-          depositOrderId,
+          sourceId,
           status: WithdrawStatus.PENDING,
           fromWalletId: wallet.id,
           network: BlockchainNetwork.OPBNB,
