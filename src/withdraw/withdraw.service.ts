@@ -16,6 +16,7 @@ import { EventName } from '@/common/event-name';
 import { TelegramWithdrawProcessingEvent } from '@/telegram/telegram.dto';
 import { User } from '@/users/user.entity';
 import { toErr } from '@/common/errors';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 @Injectable()
 export class WithdrawService {
@@ -122,59 +123,51 @@ export class WithdrawService {
     sourceId: string,
   ): Promise<Result<void, Error>> {
     // Transfer tokens on blockchain
-    const txHashResult = await this.transferTokens(
-      wallet,
+    const txHashResult = await this.blockchainHelperService.transferToken(
+      wallet.privateKey,
       user.walletAddress!,
+      BlockchainToken.USDT,
+      BlockchainNetwork.OPBNB,
       payout,
     );
     if (txHashResult.isErr()) {
-      await this.updateWithdrawStatusBySourceId(sourceId, WithdrawStatus.FAIL);
+      await this.updateWithdrawBySourceId(sourceId, {
+        status: WithdrawStatus.FAIL,
+      });
       return err(txHashResult.error);
     }
 
-    // Update status to processing
-    await this.updateWithdrawStatusBySourceId(
-      sourceId,
-      WithdrawStatus.PROCESSING,
-    );
+    const transactionHash = txHashResult.value;
+
+    await this.updateWithdrawBySourceId(sourceId, {
+      transactionHash,
+      status: WithdrawStatus.PROCESSING,
+    });
+
+    // Notify the user via Telegram if possible
+    this.notifyUserViaTelegram(user, payout, transactionHash);
 
     // Get transaction receipt
-    const receiptResult = await this.getTransactionReceipt(txHashResult.value);
+    const receiptResult =
+      await this.blockchainHelperService.getTransactionReceipt(
+        transactionHash,
+        BlockchainNetwork.OPBNB,
+      );
+
     if (receiptResult.isErr()) {
-      await this.updateWithdrawStatusBySourceId(sourceId, WithdrawStatus.FAIL);
+      await this.updateWithdrawBySourceId(sourceId, {
+        status: WithdrawStatus.FAIL,
+      });
       return err(receiptResult.error);
     }
 
     // Update status to success
-    await this.updateWithdrawStatusBySourceId(sourceId, WithdrawStatus.SUCCESS);
-
-    // Notify the user via Telegram if possible
-    this.notifyUserViaTelegram(user, payout, txHashResult.value);
+    await this.updateWithdrawBySourceId(sourceId, {
+      status: WithdrawStatus.SUCCESS,
+      onChainFee: receiptResult.value.gasUsed.toString(),
+    });
 
     return ok();
-  }
-
-  private async transferTokens(
-    wallet: WalletWithdraw,
-    destinationAddress: string,
-    amount: number,
-  ): Promise<Result<string, Error>> {
-    return await this.blockchainHelperService.transferToken(
-      wallet.privateKey,
-      destinationAddress,
-      BlockchainToken.USDT,
-      BlockchainNetwork.OPBNB,
-      amount,
-    );
-  }
-
-  private async getTransactionReceipt(
-    txHash: string,
-  ): Promise<Result<any, Error>> {
-    return await this.blockchainHelperService.getTransactionReceipt(
-      txHash,
-      BlockchainNetwork.OPBNB,
-    );
   }
 
   private notifyUserViaTelegram(
@@ -192,15 +185,15 @@ export class WithdrawService {
     }
   }
 
-  private async updateWithdrawStatusBySourceId(
+  private async updateWithdrawBySourceId(
     sourceId: string,
-    status: WithdrawStatus,
+    data: QueryDeepPartialEntity<Withdraw>,
   ): Promise<Result<void, Error>> {
     try {
-      await this.withdrawRepository.update({ sourceId }, { status });
+      await this.withdrawRepository.update({ sourceId }, data);
       return ok();
     } catch (error) {
-      return toErr(error, 'Unknown error when update withdraw status');
+      return toErr(error, 'Unknown error when update withdraw tx hash');
     }
   }
 
@@ -234,6 +227,7 @@ export class WithdrawService {
     payout: number,
   ): Promise<WalletWithdraw | null> {
     return await this.walletWithdrawRepository.findOne({
+      select: ['id', 'address', 'privateKey', 'lastUsedAt', 'balanceUsdtOpBnb'],
       where: {
         balanceUsdtOpBnb: MoreThanOrEqual(payout),
       },
