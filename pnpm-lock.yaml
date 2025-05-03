@@ -118,6 +118,9 @@ importers:
       nestjs-telegraf:
         specifier: ^2.8.1
         version: 2.8.1(@nestjs/common@11.0.21(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.0.21)(reflect-metadata@0.2.2)(telegraf@4.16.3)(typescript@5.8.3)
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       pg:
         specifier: ^8.15.1
         version: 8.15.1
@@ -1243,6 +1246,11 @@ packages:
   '@pkgr/core@0.2.4':
     resolution: {integrity: sha512-ROFF39F6ZrnzSUEmQQZUar0Jt4xVoP9WnDRdWwF4NNcXs3xBTLgBUDoOwW141y1jP+S8nahIbdxbFC7IShw9Iw==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@rollup/rollup-linux-x64-gnu@4.40.1':
+    resolution: {integrity: sha512-XiK5z70PEFEFqcNj3/zRSz/qX4bp4QIraTy9QjwJAb/Z8GM7kVUsD0Uk8maIPeTyPCP03ChdI+VVmJriKYbRHQ==}
+    cpu: [x64]
+    os: [linux]
 
   '@scarf/scarf@1.4.0':
     resolution: {integrity: sha512-xxeapPiUXdZAE3che6f3xogoJPeZgig6omHEy1rIY5WVsB3H2BHNnZH+gHG6x91SCWyQCzWGsuL2Hh3ClO5/qQ==}
@@ -3357,6 +3365,10 @@ packages:
       reflect-metadata: ^0.2.2
       telegraf: ^4.0.0
       typescript: ^4.1.2 || ^5.0.0
+
+  neverthrow@8.2.0:
+    resolution: {integrity: sha512-kOCT/1MCPAxY5iUV3wytNFUMUolzuwd/VF/1KCx7kf6CutrOsTie+84zTGTpgQycjvfLdBBdvBvFLqFD2c0wkQ==}
+    engines: {node: '>=18'}
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
@@ -5625,6 +5637,9 @@ snapshots:
     optional: true
 
   '@pkgr/core@0.2.4': {}
+
+  '@rollup/rollup-linux-x64-gnu@4.40.1':
+    optional: true
 
   '@scarf/scarf@1.4.0': {}
 
@@ -8102,6 +8117,10 @@ snapshots:
       reflect-metadata: 0.2.2
       telegraf: 4.16.3
       typescript: 5.8.3
+
+  neverthrow@8.2.0:
+    optionalDependencies:
+      '@rollup/rollup-linux-x64-gnu': 4.40.1
 
   node-abort-controller@3.1.1: {}
 

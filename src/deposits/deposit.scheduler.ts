@@ -73,67 +73,44 @@ export class DepositsScheduler {
 
   // Delete all existing account schedules
   private deleteAllAccountSchedules(): void {
-    try {
-      const jobs = this.schedulerRegistry.getCronJobs();
+    const jobs = this.schedulerRegistry.getCronJobs();
 
-      jobs.forEach((job, name) => {
-        if (name.startsWith('account-')) {
-          this.schedulerRegistry.deleteCronJob(name);
-          this.logger.debug(`Deleted cron job: ${name}`);
-        }
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error deleting account schedules: ${error.message}`,
-          error.stack,
-        );
+    jobs.forEach((job, name) => {
+      if (name.startsWith('account-')) {
+        this.schedulerRegistry.deleteCronJob(name);
+        this.logger.debug(`Deleted cron job: ${name}`);
       }
-    }
+    });
   }
 
   // Create new schedules for each account
   private createAccountSchedules(accounts: BinanceAccount[]): void {
     accounts.forEach((account, index) => {
-      try {
-        // Calculate the seconds delay: (i * 7) mod 60
-        const secondsDelay = (index * 7) % 60;
+      // Calculate the seconds delay: (i * 7) mod 60
+      const secondsDelay = (index * 7) % 60;
 
-        // Create a cron expression that runs every 10 seconds, starting at the calculated delay
-        // Format: seconds minutes hours day-of-month month day-of-week
-        const cronExpression = `${secondsDelay}/10 * * * * *`;
+      // Create a cron expression that runs every 10 seconds, starting at the calculated delay
+      // Format: seconds minutes hours day-of-month month day-of-week
+      const cronExpression = `${secondsDelay}/10 * * * * *`;
 
-        const jobName = `account-${account.id}`;
+      const jobName = `account-${account.id}`;
 
-        const job = new CronJob(cronExpression, async () => {
-          await this.fetchPayTradeHistoryForAccount(account);
+      const job = new CronJob(cronExpression, async () => {
+        (
+          await this.depositsService.processSingleAccountTradeHistory(account)
+        ).forEach((result) => {
+          if (result.isErr()) {
+            this.logger.error(result.error.message, result.error.stack);
+          }
         });
+      });
 
-        this.schedulerRegistry.addCronJob(jobName, job);
-        job.start();
+      this.schedulerRegistry.addCronJob(jobName, job);
+      job.start();
 
-        this.logger.debug(
-          `Created cron job ${jobName} with expression: ${cronExpression}`,
-        );
-      } catch (error) {
-        if (error instanceof Error) {
-          this.logger.error(
-            `Error creating schedule for account ${account.id}: ${error.message}`,
-            error.stack,
-          );
-        }
-      }
+      this.logger.debug(
+        `Created cron job ${jobName} with expression: ${cronExpression}`,
+      );
     });
-  }
-
-  // Fetch pay trade history for a specific account
-  private async fetchPayTradeHistoryForAccount(
-    account: BinanceAccount,
-  ): Promise<void> {
-    this.logger.debug(
-      `Fetching pay trade history for account ${account.id} (${account.binanceUsername})`,
-    );
-
-    await this.depositsService.processSingleAccountTradeHistory(account);
   }
 }

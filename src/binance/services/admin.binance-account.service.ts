@@ -8,6 +8,7 @@ import { BinanceClient } from '../binance-client';
 import Big from 'big.js';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import { SettingService } from '@/setting/setting.service';
+import { err, Result } from 'neverthrow';
 
 @Injectable()
 export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccount> {
@@ -27,9 +28,9 @@ export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccoun
     network: BlockchainNetwork,
     amount: number,
     walletAddress: string,
-  ): Promise<string> {
+  ): Promise<Result<string, Error>> {
     if (amount < 20) {
-      throw new Error('Amount must not be less than 20');
+      return err(new Error('Amount must not be less than 20'));
     }
     const whiteList = (
       await this.settingService.getSetting(
@@ -42,7 +43,7 @@ export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccoun
 
     const lowerWalletAddress = walletAddress.toLowerCase();
     if (!whiteList.includes(lowerWalletAddress)) {
-      throw new Error('Wallet address is not in whitelist');
+      return err(new Error('Wallet address is not in whitelist'));
     }
 
     const account = await this.repository.findOneByOrFail({ id: accountId });
@@ -54,7 +55,7 @@ export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccoun
     });
 
     if (syncAccount.usdtBalance < amount) {
-      throw new Error('Insufficient balance');
+      return err(new Error('Insufficient balance'));
     }
 
     const binanceClient = new BinanceClient({
@@ -63,15 +64,9 @@ export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccoun
       proxy: account.proxy,
     });
 
-    const { id: withdrawId } = await binanceClient.withdraw(
-      symbol,
-      walletAddress,
-      network,
-      amount,
-    );
-
-    await this.#syncBalance(account, symbol);
-    return withdrawId;
+    return (
+      await binanceClient.withdraw(symbol, walletAddress, network, amount)
+    ).map((value) => value.id);
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, {
@@ -88,28 +83,30 @@ export class AdminBinanceAccountService extends TypeOrmCrudService<BinanceAccoun
   }
 
   async #syncBalance(account: BinanceAccount, symbol: string) {
-    try {
-      const binanceClient = new BinanceClient({
-        apiKey: account.binanceApiKey,
-        apiSecret: account.binanceApiSecret,
-        proxy: account.proxy,
-      });
+    const binanceClient = new BinanceClient({
+      apiKey: account.binanceApiKey,
+      apiSecret: account.binanceApiSecret,
+      proxy: account.proxy,
+    });
 
-      const balance = await binanceClient.getAccountBalanceBySymbol(symbol);
-      if (balance && Big(balance).gt(0)) {
-        await this.repository.update(
-          {
-            id: account.id,
-          },
-          {
-            usdtBalance: Big(balance).toNumber(),
-          },
-        );
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
+    const balanceResult = await binanceClient.getAccountBalanceBySymbol(symbol);
+
+    if (balanceResult.isErr()) {
+      this.logger.error(balanceResult.error.message, balanceResult.error.stack);
+      return;
+    }
+
+    const balance = balanceResult.value;
+
+    if (Big(balance).gt(0)) {
+      await this.repository.update(
+        {
+          id: account.id,
+        },
+        {
+          usdtBalance: Big(balance).toNumber(),
+        },
+      );
     }
   }
 }

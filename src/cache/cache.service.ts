@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import { err, ok, Result } from 'neverthrow';
 
 @Injectable()
 export class CacheService {
@@ -16,12 +17,14 @@ export class CacheService {
     lockKey: string,
     releaseTime: number,
     fn: () => Promise<R>,
-  ): Promise<R> {
+  ): Promise<Result<R, Error>> {
     if (!(await this.acquireLock(lockKey, releaseTime))) {
-      throw new Error(`Failed to acquire lock ${lockKey} for ${releaseTime}s`);
+      return err(
+        new Error(`Failed to acquire lock ${lockKey} for ${releaseTime}ms`),
+      );
     }
     try {
-      return await fn();
+      return ok(await fn());
     } finally {
       await this.releaseLock(lockKey);
     }
@@ -43,12 +46,6 @@ export class CacheService {
   }
 
   private async releaseLock(lockKey: string): Promise<void> {
-    try {
-      await this.redis.del(lockKey);
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
-    }
+    await this.redis.del(lockKey);
   }
 }

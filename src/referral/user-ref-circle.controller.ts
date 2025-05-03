@@ -35,29 +35,21 @@ export class UserRefCircleController {
     @AuthUser('userId') userId: number,
     @Body() request: WithdrawUserRefCircleRequest,
   ): Promise<ActionResponse> {
-    try {
-      await this.cacheService.executeWithLock(
-        `lock:withdraw-ref:${userId}`,
-        5000,
-        async () =>
-          this.userRefCircleService.withdrawCircle(userId, request.circleId),
-      );
+    const result = await this.cacheService.executeWithLock(
+      `lock:withdraw-ref:${userId}`,
+      5000,
+      async () =>
+        this.userRefCircleService.withdrawCircle(userId, request.circleId),
+    );
+    if (result.isErr()) {
       return {
-        success: true,
-        message: '',
+        success: false,
+        message: result.error.message,
       };
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
-        return {
-          success: false,
-          message: err.message,
-        };
-      }
     }
     return {
-      success: false,
-      message: 'Unknown error',
+      success: true,
+      message: '',
     };
   }
 

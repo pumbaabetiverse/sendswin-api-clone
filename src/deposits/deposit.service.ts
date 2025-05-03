@@ -32,6 +32,7 @@ import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 import { BinanceAccount } from '@/binance/binance.entity';
 import { CacheService } from '@/cache/cache.service';
 import { User } from '@/users/user.entity';
+import { err, ok, Result } from 'neverthrow';
 
 @Injectable()
 export class DepositsService {
@@ -63,13 +64,40 @@ export class DepositsService {
     return buildPaginateResponse(items, total, page, limit);
   }
 
-  async processDepositItem(data: DepositProcessQueueDto): Promise<void> {
+  async processSingleAccountTradeHistory(
+    account: BinanceAccount,
+  ): Promise<Result<void, Error>[]> {
+    const tradeHistoryResult =
+      await this.binanceService.getPayTradeHistory(account);
+
+    if (tradeHistoryResult.isErr()) {
+      return [err(tradeHistoryResult.error)];
+    }
+
+    const depositItems = tradeHistoryResult.value.filter((item) =>
+      this.isDepositHistory(item),
+    );
+
+    return (
+      await Promise.allSettled(
+        depositItems.map((item) =>
+          this.processDepositItemWithLock(item, account),
+        ),
+      )
+    ).map((result) =>
+      result.status === 'fulfilled' ? result.value : err(result.reason),
+    );
+  }
+
+  private async processDepositItem(
+    data: DepositProcessQueueDto,
+  ): Promise<Result<void, Error>> {
     try {
       const { item, account } = data;
 
       // Skip if deposit already exists
       if (await this.isDepositAlreadyProcessed(item.orderId)) {
-        return;
+        return ok();
       }
 
       // Create and populate deposit record
@@ -77,8 +105,7 @@ export class DepositsService {
 
       // Process deposit based on payer information
       if (!item.payerInfo?.name) {
-        await this.saveDeposit(deposit);
-        return;
+        return await this.saveDeposit(deposit);
       }
 
       deposit.payerUsername = item.payerInfo.name;
@@ -88,15 +115,18 @@ export class DepositsService {
         item.payerInfo.name,
       );
       if (!this.isValidUserForDeposit(user, deposit)) {
-        await this.saveDeposit(deposit);
-        return;
+        return await this.saveDeposit(deposit);
       }
 
       // Calculate game result and update deposit
       await this.calculateAndUpdateGameResult(deposit);
 
       // Save deposit and process-related actions
-      await this.saveDeposit(deposit);
+      const saveResult = await this.saveDeposit(deposit);
+
+      if (saveResult.isErr()) {
+        return saveResult;
+      }
 
       // Process referral commission
       this.addReferralContribution(deposit, user!);
@@ -106,31 +136,13 @@ export class DepositsService {
 
       // Add withdrawal winnings to the queue
       await this.addWinningWithdrawal(deposit, user!);
-    } catch (error) {
-      this.handleError(error, 'Error processing deposit item');
-    }
-  }
 
-  async processSingleAccountTradeHistory(
-    account: BinanceAccount,
-  ): Promise<void> {
-    try {
-      const tradeHistory =
-        await this.binanceService.getPayTradeHistory(account);
-      const depositItems = tradeHistory.filter((item) =>
-        this.isDepositHistory(item),
-      );
-
-      await Promise.all(
-        depositItems.map((item) =>
-          this.processDepositItemWithLock(item, account),
-        ),
-      );
+      return ok();
     } catch (error) {
-      this.handleError(
-        error,
-        `Error processing trade history for account ${account.id}`,
-      );
+      if (error instanceof Error) {
+        return err(error);
+      }
+      return err(new Error('Unknown error in process deposit item'));
     }
   }
 
@@ -170,16 +182,16 @@ export class DepositsService {
   private async processDepositItemWithLock(
     item: PayTradeHistoryItem,
     account: BinanceAccount,
-  ): Promise<void> {
-    try {
-      await this.cacheService.executeWithLock(
-        `lock:deposit:${item.orderId}`,
-        3000,
-        async () => await this.processDepositItem({ item, account }),
-      );
-    } catch (error) {
-      this.handleError(error);
+  ): Promise<Result<void, Error>> {
+    const result = await this.cacheService.executeWithLock(
+      `lock:deposit:${item.orderId}`,
+      3000,
+      async () => await this.processDepositItem({ item, account }),
+    );
+    if (result.isErr()) {
+      return err(result.error);
     }
+    return result.value;
   }
 
   private isDepositHistory(item: PayTradeHistoryItem): boolean {
@@ -246,8 +258,16 @@ export class DepositsService {
     return true;
   }
 
-  private async saveDeposit(deposit: Deposit): Promise<void> {
-    await this.depositsRepository.insert(deposit);
+  private async saveDeposit(deposit: Deposit): Promise<Result<void, Error>> {
+    try {
+      await this.depositsRepository.insert(deposit);
+      return ok();
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(error);
+      }
+      return err(new Error('Unknown error in save depsosit'));
+    }
   }
 
   private async calculateAndUpdateGameResult(deposit: Deposit): Promise<void> {
@@ -393,14 +413,5 @@ export class DepositsService {
       SettingKey[`${gameType}_MULTIPLIER`],
       gameType === 'ODD_EVEN' ? 1.95 : 300,
     );
-  }
-
-  private handleError(error: unknown, message?: string): void {
-    if (error instanceof Error) {
-      this.logger.error(
-        message ? `${message}: ${error.message}` : error.message,
-        error.stack,
-      );
-    }
   }
 }

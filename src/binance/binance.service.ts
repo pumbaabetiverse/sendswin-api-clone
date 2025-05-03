@@ -7,6 +7,7 @@ import { DepositOption } from '@/deposits/deposit.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Result } from 'neverthrow';
 
 @Injectable()
 export class BinanceService {
@@ -48,21 +49,14 @@ export class BinanceService {
 
   async getPayTradeHistory(
     account: BinanceAccount,
-  ): Promise<PayTradeHistoryResponse['data']> {
-    try {
-      const binanceClient = new BinanceClient({
-        apiKey: account.binanceApiKey,
-        apiSecret: account.binanceApiSecret,
-        proxy: account.proxy,
-      });
+  ): Promise<Result<PayTradeHistoryResponse['data'], Error>> {
+    const binanceClient = new BinanceClient({
+      apiKey: account.binanceApiKey,
+      apiSecret: account.binanceApiSecret,
+      proxy: account.proxy,
+    });
 
-      const response = await binanceClient.getPayTradeHistory(50);
-      return response.data;
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
-      return [];
-    }
+    const result = await binanceClient.getPayTradeHistory(50);
+    return result.map((value) => value.data);
   }
 }

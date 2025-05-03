@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Logger,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -11,7 +12,7 @@ import { AdminCrud } from '@/common/decorators/common.decorator';
 import { Crud, CrudController } from '@dataui/crud';
 import { BinanceAccount } from '../binance.entity';
 import { AdminBinanceAccountService } from '../services/admin.binance-account.service';
-import { NoticeResponse } from '@/common/dto/base.dto';
+import { ActionResponse, NoticeResponse } from '@/common/dto/base.dto';
 import { BlockchainNetwork, BlockchainToken } from '@/common/const';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -62,6 +63,8 @@ export class ManualWithdrawRequest {
 export class AdminBinanceAccountController
   implements CrudController<BinanceAccount>
 {
+  private readonly logger = new Logger(AdminBinanceAccountController.name);
+
   constructor(public service: AdminBinanceAccountService) {}
 
   @Patch('actions/sync-balance')
@@ -75,8 +78,8 @@ export class AdminBinanceAccountController
   @HttpCode(HttpStatus.OK)
   async manualWithdraw(
     @Body() request: ManualWithdrawRequest,
-  ): Promise<NoticeResponse> {
-    await this.service.withdrawToWallet(
+  ): Promise<ActionResponse> {
+    const result = await this.service.withdrawToWallet(
       request.accountId,
       request.symbol,
       request.network,
@@ -84,8 +87,17 @@ export class AdminBinanceAccountController
       request.walletAddress,
     );
 
-    return {
-      success: true,
-    };
+    if (result.isOk()) {
+      return {
+        success: true,
+        message: '',
+      };
+    } else {
+      this.logger.error(result.error.message, result.error.stack);
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
   }
 }

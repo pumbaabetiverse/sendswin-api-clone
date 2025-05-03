@@ -1,9 +1,10 @@
 // binance-client.ts
 
 import { paths } from '@/common/binance-schema.gen';
-import axios, { AxiosError, AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { err, ok, Result } from 'neverthrow';
 
 /**
  * Cấu hình client Binance
@@ -51,12 +52,6 @@ export class BinanceClient {
     };
 
     const [url, port, username, password] = this.config.proxy.split(':');
-    if (!url || !port || !username || !password) {
-      throw new Error(
-        'Invalid proxy format. Expected format: url:port:username:pass',
-      );
-    }
-
     const proxyUrl = `http://${username}:${password}@${url}:${port}`;
     const httpsAgent = new HttpsProxyAgent(proxyUrl);
 
@@ -69,18 +64,23 @@ export class BinanceClient {
     });
   }
 
-  async getAccountBalanceBySymbol(symbol: string) {
+  async getAccountBalanceBySymbol(
+    symbol: string,
+  ): Promise<Result<string, Error>> {
     const result = await this.signedRequest<
       paths['/sapi/v1/asset/get-funding-asset']['post']['responses']['200']['content']['application/json']
     >('POST', '/sapi/v1/asset/get-funding-asset');
-    return result.find((v) => v.asset.toLowerCase() === symbol.toLowerCase())
-      ?.free;
+    return result.map(
+      (data) =>
+        data.find((v) => v.asset.toLowerCase() === symbol.toLowerCase())
+          ?.free ?? '0',
+    );
   }
 
   async getPayTradeHistory(
     limit: number = 100,
-  ): Promise<PayTradeHistoryResponse> {
-    return this.signedRequest<PayTradeHistoryResponse>(
+  ): Promise<Result<PayTradeHistoryResponse, Error>> {
+    return await this.signedRequest<PayTradeHistoryResponse>(
       'GET',
       '/sapi/v1/pay/transactions',
       {
@@ -109,11 +109,20 @@ export class BinanceClient {
   /**
    * Tạo chữ ký HMAC SHA256 cho request
    */
-  private sign(queryString: string): string {
-    return crypto
-      .createHmac('sha256', this.config.apiSecret)
-      .update(queryString)
-      .digest('hex');
+  private sign(queryString: string): Result<string, Error> {
+    try {
+      return ok(
+        crypto
+          .createHmac('sha256', this.config.apiSecret)
+          .update(queryString)
+          .digest('hex'),
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(error);
+      }
+      return err(new Error('Unknown error'));
+    }
   }
 
   /**
@@ -123,8 +132,7 @@ export class BinanceClient {
     method: 'GET' | 'POST' | 'DELETE',
     endpoint: string,
     params: Record<string, any> = {},
-  ): Promise<T> {
-    // Thêm timestamp
+  ): Promise<Result<T, Error>> {
     const timestamp = Date.now();
     const requestParams: Record<string, string | number | boolean> = {
       ...params,
@@ -132,31 +140,44 @@ export class BinanceClient {
       recvWindow: 30000,
     };
 
-    // Tạo query string
     const queryString = Object.keys(requestParams)
       .map((key) => `${key}=${encodeURIComponent(requestParams[key])}`)
       .join('&');
 
-    // Tạo chữ ký
-    const signature = this.sign(queryString);
-    try {
-      const response = await this.client.request({
-        method,
-        url: endpoint,
-        params: {
-          ...requestParams,
-          signature,
-        },
-      });
+    const signatureResult = this.sign(queryString);
 
-      return response.data as T;
+    if (signatureResult.isErr()) {
+      return err(signatureResult.error);
+    }
+
+    return await this.sendRequest<T>({
+      method,
+      url: endpoint,
+      params: {
+        ...requestParams,
+        signature: signatureResult.value,
+      },
+    });
+  }
+
+  private async sendRequest<T>(
+    config: AxiosRequestConfig,
+  ): Promise<Result<T, Error>> {
+    try {
+      const response = await this.client.request<T>(config);
+      return ok(response.data);
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        throw new Error(
-          `Binance API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+      if (error instanceof AxiosError) {
+        return err(
+          new Error(
+            `Binance API error: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`,
+          ),
         );
       }
-      throw error;
+      if (error instanceof Error) {
+        return err(error);
+      }
+      return err(new Error('Binance API error: Unknown error in send request'));
     }
   }
 }
