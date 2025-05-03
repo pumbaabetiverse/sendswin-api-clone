@@ -18,21 +18,18 @@ export class WithdrawConsumer extends WorkerHost {
   }
 
   async process(job: Job<WithdrawRequestQueueDto, any, string>): Promise<any> {
-    try {
-      const isEnable = await this.settingService.getSetting(
-        SettingKey.ENABLE_USER_WITHDRAW,
-        'false',
+    const isEnable = await this.settingService.getSetting(
+      SettingKey.ENABLE_USER_WITHDRAW,
+      'false',
+    );
+    if (isEnable == 'true' || isEnable == '1') {
+      const res = await this.withdrawService.processUserWithdraw(
+        job.data.userId,
+        job.data.payout,
+        job.data.sourceId,
       );
-      if (isEnable == 'true' || isEnable == '1') {
-        await this.withdrawService.processWithdrawOnChain(
-          job.data.userId,
-          job.data.payout,
-          job.data.sourceId,
-        );
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
+      if (res.isErr()) {
+        this.logger.error(res.error.message, res.error.stack);
       }
     }
   }

@@ -81,6 +81,8 @@ export function getPublicClient(chainName?: string) {
   });
 }
 
+export type GetPublicClientType = ReturnType<typeof getPublicClient>;
+
 export function getWalletClient(privateKey: string, chainName?: string) {
   const account = privateKey.startsWith('0x')
     ? privateKeyToAccount(privateKey as Address)
@@ -92,6 +94,8 @@ export function getWalletClient(privateKey: string, chainName?: string) {
     transport: http(),
   }).extend(publicActions);
 }
+
+export type GetWalletClientType = ReturnType<typeof getWalletClient>;
 
 export const getTransactionUrl = (chain: string, hash?: string | null) => {
   switch (chain.toUpperCase()) {

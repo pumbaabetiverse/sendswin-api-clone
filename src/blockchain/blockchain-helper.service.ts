@@ -1,8 +1,14 @@
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
-import { getPublicClient, getWalletClient } from '@/common/web3.client';
+import {
+  getPublicClient,
+  GetPublicClientType,
+  getWalletClient,
+  GetWalletClientType,
+} from '@/common/web3.client';
 import { SettingService } from '@/setting/setting.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import Big from 'big.js';
+import { err, ok, Result } from 'neverthrow';
 import {
   Address,
   erc20Abi,
@@ -12,59 +18,50 @@ import {
   parseUnits,
   TransactionReceipt,
 } from 'viem';
+import { toErr } from '@/common/errors';
 
 @Injectable()
 export class BlockchainHelperService {
-  private readonly logger = new Logger(BlockchainHelperService.name);
-
   constructor(private readonly settingService: SettingService) {}
+
+  async getTransactionReceipt(
+    txHash: string,
+    network: BlockchainNetwork,
+  ): Promise<Result<TransactionReceipt, Error>> {
+    try {
+      return ok(
+        await getPublicClient(network).waitForTransactionReceipt({
+          hash: txHash as Address,
+        }),
+      );
+    } catch (error) {
+      return toErr(error, 'Unknown error get transaction receipt');
+    }
+  }
 
   async getTokenBalance(
     walletAddress: string,
     token: BlockchainToken,
     network: BlockchainNetwork,
-  ): Promise<number | null> {
-    try {
-      const client = getPublicClient(network);
-      if (token == BlockchainToken.USDT) {
-        const contractAddress = await this.getTokenAddress(token, network);
-
-        const [balance, decimals] = await client.multicall({
-          allowFailure: false,
-          contracts: [
-            {
-              address: contractAddress as Address,
-              abi: erc20Abi,
-              functionName: 'balanceOf',
-              args: [walletAddress as Address],
-            },
-            {
-              address: contractAddress as Address,
-              abi: erc20Abi,
-              functionName: 'decimals',
-            },
-          ],
-        });
-
-        // Convert the balance from token units to a human-readable number
-        return Big(formatUnits(balance, decimals)).toNumber();
+  ): Promise<Result<number, Error>> {
+    const client = getPublicClient(network);
+    if (token == BlockchainToken.USDT) {
+      const contractAddressResult = await this.getTokenAddress(token, network);
+      if (contractAddressResult.isErr()) {
+        return err(contractAddressResult.error);
       }
-
-      if (token == BlockchainToken.BNB) {
-        const balanceInWei = await client.getBalance({
-          address: walletAddress as Address,
-        });
-
-        // Convert wei to ether
-        return Big(formatEther(balanceInWei)).toNumber();
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
+      return await this.readOnChainTokenBalance(
+        client,
+        walletAddress,
+        contractAddressResult.value,
+      );
     }
 
-    return null;
+    if (token == BlockchainToken.BNB) {
+      return await this.readOnChainNativeBalance(client, walletAddress);
+    }
+
+    return err(new Error('Unsupported token'));
   }
 
   async transferToken(
@@ -73,80 +70,38 @@ export class BlockchainHelperService {
     token: BlockchainToken,
     network: BlockchainNetwork,
     amount: number,
-  ): Promise<TransactionReceipt | null> {
-    try {
-      const walletClient = getWalletClient(privateKey, network);
-      const contractAddress = await this.getTokenAddress(token, network);
+  ): Promise<Result<string, Error>> {
+    const walletClient = getWalletClient(privateKey, network);
 
-      if (token === BlockchainToken.USDT) {
-        const decimals = await walletClient.readContract({
-          address: contractAddress as Address,
-          abi: erc20Abi,
-          functionName: 'decimals',
-        });
-
-        // Convert amount to token units with proper decimals
-        const amountInTokenUnits = parseUnits(`${amount}`, decimals);
-
-        const [gasPrice, gasEstimate] = await Promise.all([
-          walletClient.getGasPrice(),
-          walletClient.estimateContractGas({
-            blockTag: 'pending',
-            abi: erc20Abi,
-            functionName: 'transfer',
-            args: [toAddress as Address, amountInTokenUnits],
-            address: contractAddress as Address,
-          }),
-        ]);
-
-        const adjustedGasLimit = (gasEstimate * 12n) / 10n;
-        const adjustedGasPrice = (gasPrice * 12n) / 10n;
-        const { request } = await walletClient.simulateContract({
-          abi: erc20Abi,
-          functionName: 'transfer',
-          args: [toAddress as Address, amountInTokenUnits],
-          address: contractAddress as Address,
-          gas: adjustedGasLimit,
-          gasPrice: adjustedGasPrice,
-        });
-
-        const txnHash = await walletClient.writeContract(request);
-
-        return walletClient.waitForTransactionReceipt({
-          hash: txnHash,
-        });
+    if (token === BlockchainToken.USDT) {
+      const contractAddressResult = await this.getTokenAddress(token, network);
+      if (contractAddressResult.isErr()) {
+        return err(contractAddressResult.error);
       }
 
-      if (token === BlockchainToken.BNB) {
-        // For native token (BNB), we do a simple transfer
-        const amountInWei = parseEther(amount.toString());
-
-        // Create transaction
-        const tx = await walletClient.sendTransaction({
-          to: toAddress as Address,
-          value: amountInWei,
-        });
-
-        // Wait for transaction to be mined
-        return walletClient.waitForTransactionReceipt({
-          hash: tx,
-        });
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
+      return await this.writeTransferToken(
+        walletClient,
+        toAddress,
+        amount,
+        contractAddressResult.value,
+      );
     }
 
-    return null;
+    if (token === BlockchainToken.BNB) {
+      return await this.writeTransferNative(walletClient, toAddress, amount);
+    }
+
+    return err(new Error('Token transfer unsupported'));
   }
 
   async getTokenAddress(
     token: BlockchainToken,
     network: BlockchainNetwork,
-  ): Promise<string> {
+  ): Promise<Result<string, Error>> {
     if (token != BlockchainToken.USDT) {
-      throw new Error('Only USDT token is supported');
+      return err(
+        new Error('Only USDT token is supported on get token address'),
+      );
     }
 
     let settingKey: SettingKey;
@@ -162,8 +117,89 @@ export class BlockchainHelperService {
 
     const address = await this.settingService.getSetting(settingKey, '');
     if (address.length == 0) {
-      throw new Error(`${token} address on ${network} network not found`);
+      return err(new Error(`${token} address on ${network} network not found`));
     }
-    return address;
+    return ok(address);
+  }
+
+  private async writeTransferNative(
+    walletClient: GetWalletClientType,
+    toAddress: string,
+    amount: number,
+  ): Promise<Result<string, Error>> {
+    try {
+      const amountInWei = parseEther(amount.toString());
+
+      // Create transaction
+      const txHash = await walletClient.sendTransaction({
+        to: toAddress as Address,
+        value: amountInWei,
+      });
+
+      return ok(txHash);
+    } catch (error) {
+      return toErr(error, 'Unknown error write transfer native');
+    }
+  }
+
+  private async writeTransferToken(
+    walletClient: GetWalletClientType,
+    toAddress: string,
+    amount: number,
+    contractAddress: string,
+    decimals: number = 18,
+  ): Promise<Result<string, Error>> {
+    try {
+      const amountInTokenUnits = parseUnits(`${amount}`, decimals);
+
+      const { request } = await walletClient.simulateContract({
+        abi: erc20Abi,
+        functionName: 'transfer',
+        args: [toAddress as Address, amountInTokenUnits],
+        address: contractAddress as Address,
+      });
+
+      const txnHash = await walletClient.writeContract(request);
+
+      return ok(txnHash);
+    } catch (error) {
+      return toErr(error, 'Unknown error write transfer token');
+    }
+  }
+
+  private async readOnChainTokenBalance(
+    client: GetPublicClientType,
+    walletAddress: string,
+    contractAddress: string,
+    decimals: number = 18,
+  ): Promise<Result<number, Error>> {
+    try {
+      const balance = await client.readContract({
+        address: contractAddress as Address,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [walletAddress as Address],
+      });
+
+      return ok(Big(formatUnits(balance, decimals)).toNumber());
+    } catch (error) {
+      return toErr(error, 'Unknown error read on chain token balance');
+    }
+  }
+
+  private async readOnChainNativeBalance(
+    client: GetPublicClientType,
+    walletAddress: string,
+  ): Promise<Result<number, Error>> {
+    try {
+      const balanceInWei = await client.getBalance({
+        address: walletAddress as Address,
+      });
+
+      // Convert wei to ether
+      return ok(Big(formatEther(balanceInWei)).toNumber());
+    } catch (error) {
+      return toErr(error, 'Unknown error read on chain native balance');
+    }
   }
 }

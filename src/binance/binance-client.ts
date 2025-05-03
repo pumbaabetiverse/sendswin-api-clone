@@ -5,6 +5,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { err, ok, Result } from 'neverthrow';
+import { toErr } from '@/common/errors';
 
 /**
  * Cấu hình client Binance
@@ -118,10 +119,7 @@ export class BinanceClient {
           .digest('hex'),
       );
     } catch (error) {
-      if (error instanceof Error) {
-        return err(error);
-      }
-      return err(new Error('Unknown error'));
+      return toErr(error, 'Unknown error when sign request');
     }
   }
 
@@ -174,10 +172,7 @@ export class BinanceClient {
           ),
         );
       }
-      if (error instanceof Error) {
-        return err(error);
-      }
-      return err(new Error('Binance API error: Unknown error in send request'));
+      return toErr(error, 'Binance API error: Unknown error in send request');
     }
   }
 }

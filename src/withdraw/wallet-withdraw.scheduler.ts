@@ -13,12 +13,6 @@ export class WalletWithdrawScheduler {
   })
   async syncWalletWithdrawBalance() {
     this.logger.debug('Running scheduled task to sync wallet withdraw balance');
-    try {
-      await this.withdrawService.syncWalletBalances();
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(error.message, error.stack);
-      }
-    }
+    await this.withdrawService.syncWalletBalances();
   }
 }

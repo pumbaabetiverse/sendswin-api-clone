@@ -99,7 +99,10 @@ export class DepositsScheduler {
         (
           await this.depositsService.processSingleAccountTradeHistory(account)
         ).forEach((result) => {
-          if (result.isErr()) {
+          if (
+            result.isErr() &&
+            !result.error.message.includes('Failed to acquire lock')
+          ) {
             this.logger.error(result.error.message, result.error.stack);
           }
         });
