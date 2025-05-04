@@ -12,14 +12,7 @@ import { Crud, CrudController } from '@dataui/crud';
 import { ActionResponse } from '@/common/dto/base.dto';
 import { Withdraw } from '@/withdraw/withdraw.entity';
 import { AdminWithdrawService } from '@/withdraw/services/admin.withdraw.service';
-
-class RefundRequestDto {
-  userId: number;
-  amount: number;
-
-  // uuid generated from the client to avoid duplicate refund request
-  txId: string;
-}
+import { RefundRequestDto } from '../dto/refund.dto';
 
 @Crud({
   model: {
