@@ -75,7 +75,7 @@ export class TelegramService {
       const extra =
         payload.result === DepositResult.WIN
           ? `\n🎉 Congratulations! Your payout of ${payload.payout} USDT will be processed shortly.\n\n⚠️ *Important*: If you do not receive your payout within 5 minutes, please contact our customer support.`
-          : '';
+          : '\n❗ Oops! You didn’t win this round. Better luck next time.\n\n⚠️ *Reminder*: Play smart, play responsibly. If you have any issues, feel free to contact our customer support.';
 
       const supportUrl = await this.settingService.getSetting(
         SettingKey.TELE_CUSTOMER_SUPPORT_URL,
