@@ -1,4 +1,16 @@
-import { WithdrawType } from '@/withdraw/withdraw.entity';
+export enum WithdrawStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  SUCCESS = 'success',
+  FAIL = 'fail',
+}
+
+export enum WithdrawType {
+  GAME = 'game',
+  REFERRAL = 'referral',
+  REFUND = 'refund',
+  OTHER = 'other',
+}
 
 export const createWithdrawSourceId = (
   withdrawType: WithdrawType,

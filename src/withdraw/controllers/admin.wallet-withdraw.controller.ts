@@ -2,9 +2,9 @@ import { Controller, HttpCode, HttpStatus, Patch } from '@nestjs/common';
 
 import { AdminCrud } from '@/common/decorators/common.decorator';
 import { Crud, CrudController } from '@dataui/crud';
-import { AdminWalletWithdrawService } from '../services/admin.wallet-withdraw.service';
-import { WalletWithdraw } from '../wallet-withdraw.entity';
 import { NoticeResponse } from '@/common/dto/base.dto';
+import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
+import { AdminWalletWithdrawService } from '@/withdraw/services/admin.wallet-withdraw.service';
 
 @Crud({
   model: {

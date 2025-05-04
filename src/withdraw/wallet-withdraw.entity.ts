@@ -1,4 +1,3 @@
-// src/withdraw/wallet-withdraw.entity.ts
 import { Exclude } from 'class-transformer';
 import {
   Column,

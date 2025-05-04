@@ -8,12 +8,12 @@ import { BlockchainModule } from '@/blockchain/blockchain.module';
 
 import { WithdrawController } from '@/withdraw/withdraw.controller';
 import { WithdrawConsumer } from '@/withdraw/withdraw.consumer';
-import { AdminWithdrawService } from './services/admin.withdraw.service';
-import { AdminWithdrawController } from './controllers/admin.withdraw.controller';
-import { AdminWalletWithdrawService } from './services/admin.wallet-withdraw.service';
-import { AdminWalletWithdrawController } from './controllers/admin.wallet-withdraw.controller';
 import { SettingModule } from '@/setting/setting.module';
 import { WalletWithdrawScheduler } from '@/withdraw/wallet-withdraw.scheduler';
+import { AdminWithdrawService } from '@/withdraw/services/admin.withdraw.service';
+import { AdminWalletWithdrawService } from '@/withdraw/services/admin.wallet-withdraw.service';
+import { AdminWithdrawController } from '@/withdraw/controllers/admin.withdraw.controller';
+import { AdminWalletWithdrawController } from '@/withdraw/controllers/admin.wallet-withdraw.controller';
 
 @Module({
   imports: [

@@ -16,8 +16,10 @@ import {
 } from '@/common/dto/pagination.dto';
 import { composePagination } from '@/common/pagination';
 import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
-import { WithdrawType } from '@/withdraw/withdraw.entity';
-import { createWithdrawSourceId } from '@/withdraw/withdraw.domain';
+import {
+  createWithdrawSourceId,
+  WithdrawType,
+} from '@/withdraw/withdraw.domain';
 
 @Injectable()
 export class UserRefCircleService {

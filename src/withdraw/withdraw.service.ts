@@ -2,7 +2,7 @@ import { BlockchainHelperService } from '@/blockchain/blockchain-helper.service'
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import { UsersService } from '@/users/user.service';
 import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
-import { Withdraw, WithdrawStatus } from '@/withdraw/withdraw.entity';
+import { Withdraw } from '@/withdraw/withdraw.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
@@ -13,7 +13,10 @@ import { TelegramWithdrawProcessingEvent } from '@/telegram/telegram.dto';
 import { User } from '@/users/user.entity';
 import { toErr } from '@/common/errors';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
-import { getWithdrawTypeFromSourceId } from '@/withdraw/withdraw.domain';
+import {
+  getWithdrawTypeFromSourceId,
+  WithdrawStatus,
+} from '@/withdraw/withdraw.domain';
 import { SettingService } from '@/setting/setting.service';
 
 @Injectable()

@@ -1,5 +1,3 @@
-// src/withdraws/entities/withdraw.entity.ts
-
 import { BlockchainNetwork } from '@/common/const';
 import { NumericColumn } from '@/common/transform-decimal';
 import {
@@ -8,19 +6,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-
-export enum WithdrawStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  SUCCESS = 'success',
-  FAIL = 'fail',
-}
-
-export enum WithdrawType {
-  GAME = 'game',
-  REFERRAL = 'referral',
-  OTHER = 'other',
-}
+import { WithdrawStatus, WithdrawType } from '@/withdraw/withdraw.domain';
 
 @Entity('withdraws')
 export class Withdraw {

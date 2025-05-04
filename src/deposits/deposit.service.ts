@@ -33,8 +33,10 @@ import { BinanceAccount } from '@/binance/binance.entity';
 import { CacheService } from '@/cache/cache.service';
 import { User } from '@/users/user.entity';
 import { err, ok, Result } from 'neverthrow';
-import { WithdrawType } from '@/withdraw/withdraw.entity';
-import { createWithdrawSourceId } from '@/withdraw/withdraw.domain';
+import {
+  createWithdrawSourceId,
+  WithdrawType,
+} from '@/withdraw/withdraw.domain';
 
 @Injectable()
 export class DepositsService {

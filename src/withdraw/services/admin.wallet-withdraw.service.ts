@@ -3,8 +3,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { WalletWithdraw } from '../wallet-withdraw.entity';
 import { WithdrawService } from '@/withdraw/withdraw.service';
+import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
 
 @Injectable()
 export class AdminWalletWithdrawService extends TypeOrmCrudService<WalletWithdraw> {
