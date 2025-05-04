@@ -1,12 +1,8 @@
 import { BlockchainHelperService } from '@/blockchain/blockchain-helper.service';
-import { BlockchainNetwork, BlockchainToken } from '@/common/const';
+import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import { UsersService } from '@/users/user.service';
 import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
-import {
-  Withdraw,
-  WithdrawStatus,
-  WithdrawType,
-} from '@/withdraw/withdraw.entity';
+import { Withdraw, WithdrawStatus } from '@/withdraw/withdraw.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
@@ -17,17 +13,20 @@ import { TelegramWithdrawProcessingEvent } from '@/telegram/telegram.dto';
 import { User } from '@/users/user.entity';
 import { toErr } from '@/common/errors';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { getWithdrawTypeFromSourceId } from '@/withdraw/withdraw.domain';
+import { SettingService } from '@/setting/setting.service';
 
 @Injectable()
 export class WithdrawService {
   constructor(
     @InjectRepository(Withdraw)
-    private withdrawRepository: Repository<Withdraw>,
+    private readonly withdrawRepository: Repository<Withdraw>,
     @InjectRepository(WalletWithdraw)
-    private walletWithdrawRepository: Repository<WalletWithdraw>,
-    private usersService: UsersService,
+    private readonly walletWithdrawRepository: Repository<WalletWithdraw>,
+    private readonly usersService: UsersService,
     private readonly blockchainHelperService: BlockchainHelperService,
-    private eventEmitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly settingService: SettingService,
   ) {}
 
   async processUserWithdraw(
@@ -61,7 +60,7 @@ export class WithdrawService {
         currency: BlockchainToken.USDT,
         walletAddress: user.walletAddress!,
         sourceId,
-        type: this.getWithdrawTypeFromSourceId(sourceId),
+        type: getWithdrawTypeFromSourceId(sourceId),
         status: WithdrawStatus.PENDING,
         fromWalletId: wallet.id,
         network: BlockchainNetwork.OPBNB,
@@ -97,6 +96,14 @@ export class WithdrawService {
     }
   }
 
+  private async isEnableUserWithdraw() {
+    const isEnable = await this.settingService.getSetting(
+      SettingKey.ENABLE_USER_WITHDRAW,
+      'false',
+    );
+    return isEnable == 'true' || isEnable == '1';
+  }
+
   private async validateWithdrawRequest(
     userId: number,
     sourceId: string,
@@ -122,6 +129,11 @@ export class WithdrawService {
     payout: number,
     sourceId: string,
   ): Promise<Result<void, Error>> {
+    // Check if user withdraw is enabled
+    if (!(await this.isEnableUserWithdraw())) {
+      return ok();
+    }
+
     // Transfer tokens on blockchain
     const txHashResult = await this.blockchainHelperService.transferToken(
       wallet.privateKey,
@@ -217,7 +229,7 @@ export class WithdrawService {
         return err(new Error('No wallet found'));
       }
 
-      return ok(await this.updateWalletBalance(wallet, payout));
+      return ok(await this.deductWalletBalance(wallet, payout));
     } catch (error) {
       return toErr(error, 'Unknown error when select wallet');
     }
@@ -237,22 +249,12 @@ export class WithdrawService {
     });
   }
 
-  private async updateWalletBalance(
+  private async deductWalletBalance(
     wallet: WalletWithdraw,
     payout: number,
   ): Promise<WalletWithdraw> {
     wallet.lastUsedAt = new Date();
     wallet.balanceUsdtOpBnb -= payout;
     return await this.walletWithdrawRepository.save(wallet);
-  }
-
-  private getWithdrawTypeFromSourceId(sourceId: string): WithdrawType {
-    if (sourceId.startsWith(WithdrawType.GAME)) {
-      return WithdrawType.GAME;
-    }
-    if (sourceId.startsWith(WithdrawType.REFERRAL)) {
-      return WithdrawType.REFERRAL;
-    }
-    return WithdrawType.OTHER;
   }
 }

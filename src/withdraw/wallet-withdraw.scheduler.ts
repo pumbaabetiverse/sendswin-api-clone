@@ -8,11 +8,10 @@ export class WalletWithdrawScheduler {
 
   constructor(private readonly withdrawService: WithdrawService) {}
 
-  @Cron(CronExpression.EVERY_10_MINUTES, {
+  @Cron(CronExpression.EVERY_5_MINUTES, {
     waitForCompletion: true,
   })
   async syncWalletWithdrawBalance() {
-    this.logger.debug('Running scheduled task to sync wallet withdraw balance');
     await this.withdrawService.syncWalletBalances();
   }
 }

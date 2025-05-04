@@ -17,6 +17,7 @@ import {
 import { composePagination } from '@/common/pagination';
 import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 import { WithdrawType } from '@/withdraw/withdraw.entity';
+import { createWithdrawSourceId } from '@/withdraw/withdraw.domain';
 
 @Injectable()
 export class UserRefCircleService {
@@ -177,7 +178,7 @@ export class UserRefCircleService {
     await this.withdrawQueue.add('withdraw-ref', {
       userId,
       payout: userRefCircle.earnFromChild,
-      sourceId: `${WithdrawType.REFERRAL}_${userRefCircle.id}`,
+      sourceId: createWithdrawSourceId(WithdrawType.REFERRAL, userRefCircle.id),
     });
   }
 

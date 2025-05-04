@@ -22,7 +22,6 @@ export class DepositsScheduler {
   @Cron('0 */1 * * * *')
   async checkBinanceAccounts() {
     try {
-      this.logger.debug('Checking for Binance account changes');
       const currentAccounts =
         await this.binanceService.getActiveBinanceAccounts();
 

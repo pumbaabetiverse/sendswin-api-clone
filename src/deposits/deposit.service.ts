@@ -21,7 +21,7 @@ import { SettingService } from '@/setting/setting.service';
 import { UsersService } from '@/users/user.service';
 import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -34,17 +34,16 @@ import { CacheService } from '@/cache/cache.service';
 import { User } from '@/users/user.entity';
 import { err, ok, Result } from 'neverthrow';
 import { WithdrawType } from '@/withdraw/withdraw.entity';
+import { createWithdrawSourceId } from '@/withdraw/withdraw.domain';
 
 @Injectable()
 export class DepositsService {
-  private readonly logger = new Logger(DepositsService.name);
-
   constructor(
     @InjectRepository(Deposit)
-    private depositsRepository: Repository<Deposit>,
-    private usersService: UsersService,
-    private binanceService: BinanceService,
-    private settingService: SettingService,
+    private readonly depositsRepository: Repository<Deposit>,
+    private readonly usersService: UsersService,
+    private readonly binanceService: BinanceService,
+    private readonly settingService: SettingService,
     @InjectQueue('withdraw')
     private withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
@@ -159,9 +158,6 @@ export class DepositsService {
 
     // Check if the sum digit is a number
     if (isNaN(sumDigit)) {
-      this.logger.warn(
-        `Last characters of transactionId are not digits: ${transactionId}`,
-      );
       return DepositResult.VOID;
     }
 
@@ -207,15 +203,7 @@ export class DepositsService {
     const existingDeposit = await this.depositsRepository.findOneBy({
       orderId,
     });
-
-    if (existingDeposit) {
-      this.logger.log(
-        `Deposit with orderId ${orderId} already exists, skipping processing`,
-      );
-      return true;
-    }
-
-    return false;
+    return !!existingDeposit;
   }
 
   private createDepositRecord(
@@ -318,7 +306,7 @@ export class DepositsService {
         {
           userId: user.id,
           payout: deposit.payout,
-          sourceId: `${WithdrawType.GAME}_${deposit.orderId}`,
+          sourceId: createWithdrawSourceId(WithdrawType.GAME, deposit.orderId),
         },
         {
           removeOnComplete: true,
