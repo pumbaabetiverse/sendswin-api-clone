@@ -11,57 +11,48 @@ export class TelegramUpdate {
   private logger = new Logger(TelegramUpdate.name);
 
   constructor(
-    private settingService: SettingService,
-    private userService: UsersService,
+    private readonly settingService: SettingService,
+    private readonly userService: UsersService,
   ) {}
 
   @Start()
   async startCommand(@Ctx() ctx: Context, @Message('text') message: string) {
-    try {
-      if (!ctx.message) {
-        return;
-      }
-      const chatId = ctx.message.chat.id.toString();
-      const telegramId = ctx.message.from.id.toString();
-      const firstName = ctx.message.from.first_name || '';
-      const lastName = ctx.message.from.last_name || '';
-      const fullName = `${firstName} ${lastName}`.trim();
-      const refCode = message.split(' ')[1];
-      await this.userService.createOrUpdateUser(
-        telegramId,
-        fullName,
-        chatId,
-        refCode,
-      );
-
-      const miniAppUrl = await this.settingService.getSetting(
-        SettingKey.TELE_MINI_APP_URL,
-        'https://t.me',
-      );
-
-      await ctx.reply(
-        `👋 *Welcome, ${fullName}!*\n\nPlease tap the button below to play games.`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: '🎲 Play now',
-                  web_app: { url: miniAppUrl },
-                },
-              ],
-            ],
-          },
-        },
-      );
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error in startCommand: ${error.message}`,
-          error.stack,
-        );
-      }
+    if (!ctx.message) {
+      return;
     }
+    const chatId = ctx.message.chat.id.toString();
+    const telegramId = ctx.message.from.id.toString();
+    const firstName = ctx.message.from.first_name || '';
+    const lastName = ctx.message.from.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const refCode = message.split(' ')[1];
+    await this.userService.createOrUpdateUser(
+      telegramId,
+      fullName,
+      chatId,
+      refCode,
+    );
+
+    const miniAppUrl = await this.settingService.getSetting(
+      SettingKey.TELE_MINI_APP_URL,
+      'https://t.me',
+    );
+
+    await ctx.reply(
+      `👋 *Welcome, ${fullName}!*\n\nPlease tap the button below to play games.`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '🎲 Play now',
+                web_app: { url: miniAppUrl },
+              },
+            ],
+          ],
+        },
+      },
+    );
   }
 }
