@@ -11,6 +11,7 @@ import { UserRefCircleService } from '@/referral/user-ref-circle.service';
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
 import {
   GetAggregateUserRefResponse,
+  UserRefCircleEntityExt,
   WithdrawUserRefCircleRequest,
 } from '@/referral/user-ref-circle.dto';
 import {
@@ -19,7 +20,6 @@ import {
   PaginationResponse,
 } from '@/common/dto/pagination.dto';
 import { ApiOkResponsePagination } from '@/common/dto/response.dto';
-import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { ActionResponse } from '@/common/dto/base.dto';
 import { CacheService } from '@/cache/cache.service';
@@ -59,11 +59,11 @@ export class UserRefCircleController {
 
   @Get('')
   @Authenticated()
-  @ApiOkResponsePagination(UserRefCircleEntity)
+  @ApiOkResponsePagination(UserRefCircleEntityExt)
   async getRefCircleInfo(
     @AuthUser('userId') userId: number,
     @Query() pagination: PaginationQuery,
-  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+  ): Promise<PaginationResponse<UserRefCircleEntityExt>> {
     const res = await this.userRefCircleService.userRefCirclePagination(
       {
         userId,
@@ -100,12 +100,12 @@ export class UserRefCircleController {
 
   @Get(':circleId/children')
   @Authenticated()
-  @ApiOkResponsePagination(UserRefCircleEntity)
+  @ApiOkResponsePagination(UserRefCircleEntityExt)
   async getChildrenOfRefCircleInfo(
     @AuthUser('userId') userId: number,
     @Param('circleId') circleId: number,
     @Query() pagination: PaginationQuery,
-  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+  ): Promise<PaginationResponse<UserRefCircleEntityExt>> {
     const res = await this.userRefCircleService.userRefCirclePagination(
       {
         parentId: userId,

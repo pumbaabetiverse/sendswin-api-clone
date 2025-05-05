@@ -5,12 +5,14 @@ import { User } from '@/users/user.entity';
 import { isAddress } from 'viem';
 import { err, ok, Result } from 'neverthrow';
 import { fromPromiseResult } from '@/common/errors';
+import { CacheService } from '@/cache/cache.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async countUserChild(id: number): Promise<Result<number, Error>> {
@@ -140,6 +142,37 @@ export class UsersService {
         },
       ),
     );
+  }
+
+  async getTelegramFullNameCached(
+    userId: number,
+  ): Promise<Result<string | null, Error>> {
+    const cacheKey = `cache:user:fullname:${userId}`;
+    const redis = this.cacheService.getRedis();
+
+    // Try to get from cache first
+    const cachedValueResult = await fromPromiseResult(redis.get(cacheKey));
+
+    if (cachedValueResult.isOk() && cachedValueResult.value) {
+      return ok(cachedValueResult.value);
+    }
+
+    const userResult = await this.findById(userId);
+
+    if (userResult.isErr()) {
+      return err(userResult.error);
+    }
+
+    const user = userResult.value;
+    if (!user) {
+      return ok(null);
+    }
+
+    await fromPromiseResult(
+      redis.set(cacheKey, user.telegramFullName, 'EX', 3600),
+    );
+
+    return ok(user.telegramFullName);
   }
 
   private async saveUser(user: User): Promise<Result<User, Error>> {

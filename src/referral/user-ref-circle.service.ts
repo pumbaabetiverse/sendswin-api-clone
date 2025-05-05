@@ -22,6 +22,7 @@ import {
 } from '@/withdraw/withdraw.domain';
 import { err, ok, Result } from 'neverthrow';
 import { fromPromiseResult } from '@/common/errors';
+import { UserRefCircleEntityExt } from '@/referral/user-ref-circle.dto';
 
 @Injectable()
 export class UserRefCircleService {
@@ -133,7 +134,7 @@ export class UserRefCircleService {
       | FindOptionsWhere<UserRefCircleEntity>[],
     pagination: PaginationQuery,
     order: FindOptionsOrder<UserRefCircleEntity>,
-  ): Promise<Result<PaginationResponse<UserRefCircleEntity>, Error>> {
+  ): Promise<Result<PaginationResponse<UserRefCircleEntityExt>, Error>> {
     const { limit, skip, page } = composePagination(pagination);
     const result = await fromPromiseResult(
       this.userRefCircleRepository.findAndCount({
@@ -147,7 +148,26 @@ export class UserRefCircleService {
       return err(result.error);
     }
     const [items, total] = result.value;
-    return ok(buildPaginateResponse(items, total, page, limit));
+
+    // Fetch telegramFullName for each user
+    const itemsWithTelegramFullName = await Promise.all(
+      items.map(async (item) => {
+        const result = await this.userService.getTelegramFullNameCached(
+          item.userId,
+        );
+        if (result.isOk() && result.value) {
+          return {
+            ...item,
+            telegramFullName: result.value,
+          };
+        }
+        return item;
+      }),
+    );
+
+    return ok(
+      buildPaginateResponse(itemsWithTelegramFullName, total, page, limit),
+    );
   }
 
   async withdrawCircle(userId: number, circleId: number) {
