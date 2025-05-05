@@ -1,11 +1,11 @@
 // binance-client.ts
 
 import { paths } from '@/common/binance-schema.gen';
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { err, ok, Result } from 'neverthrow';
-import { toErr } from '@/common/errors';
+import { err, Result } from 'neverthrow';
+import { fromPromiseResult, fromSyncResult } from '@/common/errors';
 
 /**
  * Cấu hình client Binance
@@ -111,16 +111,12 @@ export class BinanceClient {
    * Tạo chữ ký HMAC SHA256 cho request
    */
   private sign(queryString: string): Result<string, Error> {
-    try {
-      return ok(
-        crypto
-          .createHmac('sha256', this.config.apiSecret)
-          .update(queryString)
-          .digest('hex'),
-      );
-    } catch (error) {
-      return toErr(error, 'Unknown error when sign request');
-    }
+    return fromSyncResult(() =>
+      crypto
+        .createHmac('sha256', this.config.apiSecret)
+        .update(queryString)
+        .digest('hex'),
+    );
   }
 
   /**
@@ -161,18 +157,8 @@ export class BinanceClient {
   private async sendRequest<T>(
     config: AxiosRequestConfig,
   ): Promise<Result<T, Error>> {
-    try {
-      const response = await this.client.request<T>(config);
-      return ok(response.data);
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        return err(
-          new Error(
-            `Binance API error: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`,
-          ),
-        );
-      }
-      return toErr(error, 'Binance API error: Unknown error in send request');
-    }
+    return fromPromiseResult(this.client.request<T>(config)).map(
+      (value) => value.data,
+    );
   }
 }

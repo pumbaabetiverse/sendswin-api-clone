@@ -13,6 +13,9 @@ import { Equal, Repository } from 'typeorm';
 import { UpdateAdminInfoRequest } from '../dto/admin-user.dto';
 import { AdminUser } from '../entities/admin-user.entity';
 import { EnvironmentVariables } from '@/common/types';
+import { err, ok, Result } from 'neverthrow';
+import { fromPromiseResult } from '@/common/errors';
+
 @Injectable()
 export class AdminUserService implements OnModuleInit {
   constructor(
@@ -20,52 +23,64 @@ export class AdminUserService implements OnModuleInit {
     private readonly repository: Repository<AdminUser>,
     private readonly configService: ConfigService<EnvironmentVariables>,
   ) {}
+
   onModuleInit() {
     //
   }
 
-  async verify(data: AdminLoginPayloadDto) {
+  async verify(data: AdminLoginPayloadDto): Promise<Result<AdminUser, Error>> {
     const secret = this.configService.get('NEST_PASSWORD_SECRET', {
       infer: true,
     });
     if (!secret) {
-      throw new BadRequestException('Secret not found');
+      return err(new BadRequestException('Secret not found'));
     }
     const user = await this.repository.findOne({
       where: { username: Equal(data.username) },
       select: ['id', 'password', 'suspended'],
     });
     if (!user) {
-      throw new NotFoundException('Username or password does not match');
+      return err(new NotFoundException('Username or password does not match'));
     }
     const match = await argon2.verify(user.password, data.password, {
       secret: Buffer.from(secret),
     });
 
     if (!match) {
-      throw new NotFoundException('Username or password does not match');
+      return err(new NotFoundException('Username or password does not match'));
     }
 
     if (user?.suspended) {
-      throw new UnauthorizedException();
+      return err(new UnauthorizedException());
     }
-    return user;
+
+    return ok(user);
   }
 
-  async get(id: string) {
-    return this.repository.findOneBy({ id: Equal(id) });
+  async get(id: string): Promise<Result<AdminUser | null, Error>> {
+    return fromPromiseResult(this.repository.findOneBy({ id: Equal(id) }));
   }
 
-  async updateInfo(userId: string, data: UpdateAdminInfoRequest) {
+  async updateInfo(
+    userId: string,
+    data: UpdateAdminInfoRequest,
+  ): Promise<Result<AdminUser, Error>> {
     const secret = this.configService.get('NEST_PASSWORD_SECRET', {
       infer: true,
     });
     if (!secret) {
-      throw new BadRequestException('Secret not found');
+      return err(new BadRequestException('Secret not found'));
     }
-    const user = await this.repository.findOneByOrFail({
-      id: userId,
-    });
+    const userResult = await fromPromiseResult(
+      this.repository.findOneByOrFail({
+        id: userId,
+      }),
+    );
+
+    if (userResult.isErr()) {
+      return err(userResult.error);
+    }
+    const user = userResult.value;
 
     if (data.password) {
       const password = await argon2.hash(data.password, {
@@ -74,7 +89,7 @@ export class AdminUserService implements OnModuleInit {
       user.password = password;
     }
     user.name = data.name ?? user.name;
-    return this.repository.save(user);
+    return fromPromiseResult(this.repository.save(user));
   }
 
   async updateAdmin(

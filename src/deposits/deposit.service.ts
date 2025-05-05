@@ -37,6 +37,7 @@ import {
   createWithdrawSourceId,
   WithdrawType,
 } from '@/withdraw/withdraw.domain';
+import { fromPromiseResult } from '@/common/errors';
 
 @Injectable()
 export class DepositsService {
@@ -94,63 +95,56 @@ export class DepositsService {
   private async processDepositItem(
     data: DepositProcessQueueDto,
   ): Promise<Result<void, Error>> {
-    try {
-      const { item, account } = data;
+    const { item, account } = data;
 
-      // Skip if deposit already exists
-      if (await this.isDepositAlreadyProcessed(item.orderId)) {
-        return ok();
-      }
-
-      // Create and populate deposit record
-      const deposit = this.createDepositRecord(item, account);
-
-      // Process deposit based on payer information
-      if (!item.payerInfo?.name) {
-        return await this.saveDeposit(deposit);
-      }
-
-      deposit.payerUsername = item.payerInfo.name;
-
-      // Find user and validate
-      const userResult = await this.usersService.findByBinanceUsername(
-        item.payerInfo.name,
-      );
-      if (userResult.isErr()) {
-        return err(userResult.error);
-      }
-      const user = userResult.value;
-
-      if (!this.isValidUserForDeposit(user, deposit)) {
-        return await this.saveDeposit(deposit);
-      }
-
-      // Calculate game result and update deposit
-      await this.calculateAndUpdateGameResult(deposit);
-
-      // Save deposit and process-related actions
-      const saveResult = await this.saveDeposit(deposit);
-
-      if (saveResult.isErr()) {
-        return saveResult;
-      }
-
-      // Process referral commission
-      this.addReferralContribution(deposit, user!);
-
-      // Send a new game message on Telegram notification
-      this.sendTelegramNotification(deposit, user!);
-
-      // Add withdrawal winnings to the queue
-      await this.addWinningWithdrawal(deposit, user!);
-
+    // Skip if deposit already exists
+    if (await this.isDepositAlreadyProcessed(item.orderId)) {
       return ok();
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(error);
-      }
-      return err(new Error('Unknown error in process deposit item'));
     }
+
+    // Create and populate deposit record
+    const deposit = this.createDepositRecord(item, account);
+
+    // Process deposit based on payer information
+    if (!item.payerInfo?.name) {
+      return await this.insertDepositRecord(deposit);
+    }
+
+    deposit.payerUsername = item.payerInfo.name;
+
+    // Find user and validate
+    const userResult = await this.usersService.findByBinanceUsername(
+      item.payerInfo.name,
+    );
+    if (userResult.isErr()) {
+      return err(userResult.error);
+    }
+    const user = userResult.value;
+
+    if (!this.isValidUserForDeposit(user, deposit)) {
+      return await this.insertDepositRecord(deposit);
+    }
+
+    // Calculate game result and update deposit
+    await this.calculateAndUpdateGameResult(deposit);
+
+    // Save deposit and process-related actions
+    const saveResult = await this.insertDepositRecord(deposit);
+
+    if (saveResult.isErr()) {
+      return saveResult;
+    }
+
+    // Process referral commission
+    this.addReferralContribution(deposit, user!);
+
+    // Send a new game message on Telegram notification
+    this.sendTelegramNotification(deposit, user!);
+
+    // Add withdrawal winnings to the queue
+    await this.addWinningWithdrawal(deposit, user!);
+
+    return ok();
   }
 
   private determineOddEvenResult(
@@ -254,16 +248,12 @@ export class DepositsService {
     return true;
   }
 
-  private async saveDeposit(deposit: Deposit): Promise<Result<void, Error>> {
-    try {
-      await this.depositsRepository.insert(deposit);
-      return ok();
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(error);
-      }
-      return err(new Error('Unknown error in save depsosit'));
-    }
+  private async insertDepositRecord(
+    deposit: Deposit,
+  ): Promise<Result<void, Error>> {
+    return fromPromiseResult(this.depositsRepository.insert(deposit)).map(
+      () => undefined,
+    );
   }
 
   private async calculateAndUpdateGameResult(deposit: Deposit): Promise<void> {

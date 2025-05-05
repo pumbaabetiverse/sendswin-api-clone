@@ -21,36 +21,23 @@ export class DepositsScheduler {
   // Run every 1 minute to check for account changes
   @Cron('0 */1 * * * *')
   async checkBinanceAccounts() {
-    try {
-      const currentAccounts =
-        await this.binanceService.getActiveBinanceAccounts();
+    const currentAccounts =
+      await this.binanceService.getActiveBinanceAccounts();
 
-      // Check if accounts have changed
-      const accountsChanged = this.haveAccountsChanged(
-        this.previousAccounts,
-        currentAccounts,
-      );
-
-      if (accountsChanged) {
-        this.logger.debug('Binance accounts have changed, updating schedules');
-
-        // Delete all existing schedules
-        this.deleteAllAccountSchedules();
-
-        // Create new schedules for each account
-        this.createAccountSchedules(currentAccounts);
-
-        // Update previous accounts
-        this.previousAccounts = [...currentAccounts];
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Error checking Binance accounts: ${error.message}`,
-          error.stack,
-        );
-      }
+    // Check if accounts have changed
+    if (!this.haveAccountsChanged(this.previousAccounts, currentAccounts)) {
+      return;
     }
+    this.logger.debug('Binance accounts have changed, updating schedules');
+
+    // Delete all existing schedules
+    this.deleteAllAccountSchedules();
+
+    // Create new schedules for each account
+    this.createAccountSchedules(currentAccounts);
+
+    // Update previous accounts
+    this.previousAccounts = [...currentAccounts];
   }
 
   // Compare two arrays of accounts to see if they've changed

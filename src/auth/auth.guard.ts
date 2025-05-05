@@ -18,12 +18,11 @@ export class AdminGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException();
     }
-    try {
-      const payload = await this.authSignService.getAdminFromToken(token);
-      request.admin = payload;
-    } catch {
+    const payloadResult = await this.authSignService.getAdminFromToken(token);
+    if (payloadResult.isErr()) {
       throw new UnauthorizedException();
     }
+    request.admin = payloadResult.value;
     return true;
   }
 
@@ -48,25 +47,25 @@ export class TeleAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     if (authorization?.startsWith('Bearer')) {
-      try {
-        const [, token] = authorization.split(' ') ?? [];
-        const auth = await this.authSignService.getUserFromToken(token);
-        request.auth = auth;
-      } catch {
+      const [, token] = authorization.split(' ') ?? [];
+      const result = await this.authSignService.getUserFromToken(token);
+      if (result.isErr()) {
         throw new UnauthorizedException();
       }
+      request.auth = result.value;
     } else {
-      try {
-        const teleUser = this.authService.parseTeleUser(authorization);
-        const userResult = await this.authService.loginWithTele(teleUser);
-        if (userResult.isErr()) {
-          throw new UnauthorizedException();
-        }
-        request.teleUser = teleUser;
-        request.auth = { userId: userResult.value.id };
-      } catch {
+      const teleUserResult = this.authService.parseTeleUser(authorization);
+      if (teleUserResult.isErr()) {
         throw new UnauthorizedException();
       }
+      const userResult = await this.authService.loginWithTele(
+        teleUserResult.value,
+      );
+      if (userResult.isErr()) {
+        throw new UnauthorizedException();
+      }
+      request.teleUser = teleUserResult.value;
+      request.auth = { userId: userResult.value.id };
     }
 
     return true;

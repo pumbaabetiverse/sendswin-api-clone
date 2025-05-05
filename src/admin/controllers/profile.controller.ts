@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -17,13 +18,18 @@ import { AdminUserService } from '../services/admin-user.service';
 @Authenticated('admin')
 export class AdminProfileController {
   constructor(private readonly adminUserService: AdminUserService) {}
+
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: AdminUser,
   })
-  async getMe(@AdminAuth('userId') userId: string) {
-    return this.adminUserService.get(userId);
+  async getMe(@AdminAuth('userId') userId: string): Promise<AdminUser | null> {
+    const result = await this.adminUserService.get(userId);
+    if (result.isOk()) {
+      return result.value;
+    }
+    throw new BadRequestException(result.error.message);
   }
 
   @Patch('update')
@@ -31,7 +37,11 @@ export class AdminProfileController {
   async changeProfile(
     @AdminAuth('userId') userId: string,
     @Body() data: UpdateAdminInfoRequest,
-  ) {
-    return this.adminUserService.updateInfo(userId, data);
+  ): Promise<AdminUser> {
+    const result = await this.adminUserService.updateInfo(userId, data);
+    if (result.isOk()) {
+      return result.value;
+    }
+    throw new BadRequestException(result.error.message);
   }
 }

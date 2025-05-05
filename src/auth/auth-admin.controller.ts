@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 
 import { AdminLoginPayloadDto, LoginResponseDto } from './auth.dto';
@@ -13,7 +13,10 @@ export class AuthAdminController {
     summary: 'Login to admin',
   })
   async login(@Body() body: AdminLoginPayloadDto): Promise<LoginResponseDto> {
-    const accessToken = await this.authService.loginAdmin(body);
-    return { accessToken };
+    const result = await this.authService.loginAdmin(body);
+    if (result.isErr()) {
+      throw new UnauthorizedException();
+    }
+    return { accessToken: result.value };
   }
 }
