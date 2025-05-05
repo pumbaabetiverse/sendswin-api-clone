@@ -18,7 +18,7 @@ import {
   parseUnits,
   TransactionReceipt,
 } from 'viem';
-import { toErr } from '@/common/errors';
+import { fromPromiseResult } from '@/common/errors';
 
 @Injectable()
 export class BlockchainHelperService {
@@ -28,15 +28,11 @@ export class BlockchainHelperService {
     txHash: string,
     network: BlockchainNetwork,
   ): Promise<Result<TransactionReceipt, Error>> {
-    try {
-      return ok(
-        await getPublicClient(network).waitForTransactionReceipt({
-          hash: txHash as Address,
-        }),
-      );
-    } catch (error) {
-      return toErr(error, 'Unknown error get transaction receipt');
-    }
+    return fromPromiseResult(
+      getPublicClient(network).waitForTransactionReceipt({
+        hash: txHash as Address,
+      }),
+    );
   }
 
   async getTokenBalance(
@@ -127,19 +123,15 @@ export class BlockchainHelperService {
     toAddress: string,
     amount: number,
   ): Promise<Result<string, Error>> {
-    try {
-      const amountInWei = parseEther(amount.toString());
+    const amountInWei = parseEther(amount.toString());
 
-      // Create transaction
-      const txHash = await walletClient.sendTransaction({
+    // Create transaction
+    return fromPromiseResult(
+      walletClient.sendTransaction({
         to: toAddress as Address,
         value: amountInWei,
-      });
-
-      return ok(txHash);
-    } catch (error) {
-      return toErr(error, 'Unknown error write transfer native');
-    }
+      }),
+    );
   }
 
   private async writeTransferToken(
@@ -149,22 +141,24 @@ export class BlockchainHelperService {
     contractAddress: string,
     decimals: number = 18,
   ): Promise<Result<string, Error>> {
-    try {
-      const amountInTokenUnits = parseUnits(`${amount}`, decimals);
+    const amountInTokenUnits = parseUnits(`${amount}`, decimals);
 
-      const { request } = await walletClient.simulateContract({
+    const simulateResult = await fromPromiseResult(
+      walletClient.simulateContract({
         abi: erc20Abi,
         functionName: 'transfer',
         args: [toAddress as Address, amountInTokenUnits],
         address: contractAddress as Address,
-      });
+      }),
+    );
 
-      const txnHash = await walletClient.writeContract(request);
-
-      return ok(txnHash);
-    } catch (error) {
-      return toErr(error, 'Unknown error write transfer token');
+    if (simulateResult.isErr()) {
+      return err(simulateResult.error);
     }
+
+    return fromPromiseResult(
+      walletClient.writeContract(simulateResult.value.request),
+    );
   }
 
   private async readOnChainTokenBalance(
@@ -173,33 +167,24 @@ export class BlockchainHelperService {
     contractAddress: string,
     decimals: number = 18,
   ): Promise<Result<number, Error>> {
-    try {
-      const balance = await client.readContract({
+    return fromPromiseResult(
+      client.readContract({
         address: contractAddress as Address,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [walletAddress as Address],
-      });
-
-      return ok(Big(formatUnits(balance, decimals)).toNumber());
-    } catch (error) {
-      return toErr(error, 'Unknown error read on chain token balance');
-    }
+      }),
+    ).map((value) => Big(formatUnits(value, decimals)).toNumber());
   }
 
   private async readOnChainNativeBalance(
     client: GetPublicClientType,
     walletAddress: string,
   ): Promise<Result<number, Error>> {
-    try {
-      const balanceInWei = await client.getBalance({
+    return fromPromiseResult(
+      client.getBalance({
         address: walletAddress as Address,
-      });
-
-      // Convert wei to ether
-      return ok(Big(formatEther(balanceInWei)).toNumber());
-    } catch (error) {
-      return toErr(error, 'Unknown error read on chain native balance');
-    }
+      }),
+    ).map((value) => Big(formatEther(value)).toNumber());
   }
 }

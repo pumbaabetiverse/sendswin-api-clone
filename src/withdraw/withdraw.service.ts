@@ -5,13 +5,13 @@ import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
 import { Withdraw } from '@/withdraw/withdraw.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository, UpdateResult } from 'typeorm';
 import { err, ok, Result } from 'neverthrow';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventName } from '@/common/event-name';
 import { TelegramWithdrawProcessingEvent } from '@/telegram/telegram.dto';
 import { User } from '@/users/user.entity';
-import { toErr } from '@/common/errors';
+import { fromPromiseResult } from '@/common/errors';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import {
   getWithdrawTypeFromSourceId,
@@ -78,25 +78,38 @@ export class WithdrawService {
   }
 
   async syncWalletBalances(): Promise<Result<void, Error>> {
-    try {
-      const wallets = await this.walletWithdrawRepository.find({});
-      for (const wallet of wallets) {
-        const usdtBalanceResult =
-          await this.blockchainHelperService.getTokenBalance(
-            wallet.address,
-            BlockchainToken.USDT,
-            BlockchainNetwork.OPBNB,
-          );
-
-        if (usdtBalanceResult.isOk()) {
-          wallet.balanceUsdtOpBnb = usdtBalanceResult.value;
-        }
-      }
-      await this.walletWithdrawRepository.save(wallets);
-      return ok();
-    } catch (error) {
-      return toErr(error, 'Unknown error in sync wallet balances');
+    const walletsResult = await this.getAllWallets();
+    if (walletsResult.isErr()) {
+      return err(walletsResult.error);
     }
+    const wallets = walletsResult.value;
+    for (const wallet of wallets) {
+      const usdtBalanceResult =
+        await this.blockchainHelperService.getTokenBalance(
+          wallet.address,
+          BlockchainToken.USDT,
+          BlockchainNetwork.OPBNB,
+        );
+
+      if (usdtBalanceResult.isOk()) {
+        wallet.balanceUsdtOpBnb = usdtBalanceResult.value;
+      }
+    }
+    return (await this.saveAllWallets(wallets)).map(() => undefined);
+  }
+
+  private async getAllWallets(): Promise<Result<WalletWithdraw[], Error>> {
+    return fromPromiseResult(
+      this.walletWithdrawRepository.find({
+        select: [
+          'id',
+          'address',
+          'privateKey',
+          'lastUsedAt',
+          'balanceUsdtOpBnb',
+        ],
+      }),
+    );
   }
 
   private async isEnableUserWithdraw() {
@@ -111,7 +124,11 @@ export class WithdrawService {
     userId: number,
     sourceId: string,
   ): Promise<Result<User, Error>> {
-    const user = await this.usersService.findById(userId);
+    const userResult = await this.usersService.findById(userId);
+    if (userResult.isErr()) {
+      return err(userResult.error);
+    }
+    const user = userResult.value;
     if (!user?.walletAddress) {
       return err(new Error('User does not have a wallet address'));
     }
@@ -203,61 +220,68 @@ export class WithdrawService {
   private async updateWithdrawBySourceId(
     sourceId: string,
     data: QueryDeepPartialEntity<Withdraw>,
-  ): Promise<Result<void, Error>> {
-    try {
-      await this.withdrawRepository.update({ sourceId }, data);
-      return ok();
-    } catch (error) {
-      return toErr(error, 'Unknown error when update withdraw tx hash');
-    }
+  ): Promise<Result<UpdateResult, Error>> {
+    return fromPromiseResult(
+      this.withdrawRepository.update({ sourceId }, data),
+    );
   }
 
   private async insertNewWithdraw(
     withdraw: Withdraw,
-  ): Promise<Result<void, Error>> {
-    try {
-      await this.withdrawRepository.insert(withdraw);
-      return ok();
-    } catch (error) {
-      return toErr(error, 'Unknown error when insert new withdraw');
-    }
+  ): Promise<Result<UpdateResult, Error>> {
+    return fromPromiseResult(this.withdrawRepository.insert(withdraw));
   }
 
   private async selectAppropriateWalletAndUpdateBalance(
     payout: number,
   ): Promise<Result<WalletWithdraw, Error>> {
-    try {
-      const wallet = await this.findWalletWithSufficientBalance(payout);
-      if (!wallet) {
-        return err(new Error('No wallet found'));
-      }
-
-      return ok(await this.deductWalletBalance(wallet, payout));
-    } catch (error) {
-      return toErr(error, 'Unknown error when select wallet');
+    const walletResult = await this.findWalletWithSufficientBalance(payout);
+    if (walletResult.isErr()) {
+      return err(walletResult.error);
     }
+
+    const wallet = walletResult.value;
+    if (!wallet) {
+      return err(new Error('No wallet found'));
+    }
+
+    return this.deductWalletBalance(wallet, payout);
   }
 
   private async findWalletWithSufficientBalance(
     payout: number,
-  ): Promise<WalletWithdraw | null> {
-    return await this.walletWithdrawRepository.findOne({
-      select: ['id', 'address', 'privateKey', 'lastUsedAt', 'balanceUsdtOpBnb'],
-      where: {
-        balanceUsdtOpBnb: MoreThanOrEqual(payout),
-      },
-      order: {
-        lastUsedAt: 'ASC',
-      },
-    });
+  ): Promise<Result<WalletWithdraw | null, Error>> {
+    return fromPromiseResult(
+      this.walletWithdrawRepository.findOne({
+        select: [
+          'id',
+          'address',
+          'privateKey',
+          'lastUsedAt',
+          'balanceUsdtOpBnb',
+        ],
+        where: {
+          balanceUsdtOpBnb: MoreThanOrEqual(payout),
+        },
+        order: {
+          lastUsedAt: 'ASC',
+        },
+      }),
+    );
   }
 
   private async deductWalletBalance(
     wallet: WalletWithdraw,
     payout: number,
-  ): Promise<WalletWithdraw> {
+  ): Promise<Result<WalletWithdraw, Error>> {
     wallet.lastUsedAt = new Date();
     wallet.balanceUsdtOpBnb -= payout;
-    return await this.walletWithdrawRepository.save(wallet);
+    return fromPromiseResult(this.walletWithdrawRepository.save(wallet));
+  }
+
+  private async saveAllWallets(
+    wallets: WalletWithdraw[],
+  ): Promise<Result<WalletWithdraw[], Error>> {
+    return fromPromiseResult(this.walletWithdrawRepository.save(wallets));
   }
 }

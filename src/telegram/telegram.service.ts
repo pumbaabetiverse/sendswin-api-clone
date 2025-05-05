@@ -8,9 +8,9 @@ import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 import { SettingKey } from '@/common/const';
 import { getTransactionUrl } from '@/common/web3.client';
 import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
-import { ok, Result } from 'neverthrow';
+import { Result } from 'neverthrow';
 import { Message } from 'telegraf/typings/core/types/typegram';
-import { toErr } from '@/common/errors';
+import { fromPromiseResult } from '@/common/errors';
 
 @Injectable()
 export class TelegramService {
@@ -118,10 +118,9 @@ export class TelegramService {
     message: string,
     extra: ExtraReplyMessage = {},
   ): Promise<Result<Message.TextMessage, Error>> {
-    try {
-      return ok(await this.bot.telegram.sendMessage(chatId, message, extra));
-    } catch (error) {
-      return toErr(error);
-    }
+    return fromPromiseResult(
+      this.bot.telegram.sendMessage(chatId, message, extra),
+      'Error send message',
+    );
   }
 }

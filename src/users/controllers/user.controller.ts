@@ -33,25 +33,21 @@ export class UserController {
     @AuthUser('userId') userId: number,
     @Body() request: UpdateUserWalletAddressRequest,
   ): Promise<ActionResponse> {
-    try {
-      await this.userService.updateWalletAddress(userId, request.walletAddress);
+    const res = await this.userService.updateWalletAddress(
+      userId,
+      request.walletAddress,
+    );
+    if (res.isOk()) {
       return {
         success: true,
         message: '',
       };
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
-        return {
-          success: false,
-          message: err.message,
-        };
-      }
+    } else {
+      return {
+        success: false,
+        message: res.error.message,
+      };
     }
-    return {
-      success: false,
-      message: 'Unknown error',
-    };
   }
 
   @Post('me/binance')
@@ -63,27 +59,20 @@ export class UserController {
     @AuthUser('userId') userId: number,
     @Body() request: UpdateUserBinanceUsernameRequest,
   ): Promise<ActionResponse> {
-    try {
-      await this.userService.updateBinanceUsername(
-        userId,
-        request.binanceUsername,
-      );
+    const res = await this.userService.updateBinanceUsername(
+      userId,
+      request.binanceUsername,
+    );
+    if (res.isOk()) {
       return {
         success: true,
         message: '',
       };
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
-        return {
-          success: false,
-          message: err.message,
-        };
-      }
+    } else {
+      return {
+        success: false,
+        message: res.error.message,
+      };
     }
-    return {
-      success: false,
-      message: 'Unknown error',
-    };
   }
 }

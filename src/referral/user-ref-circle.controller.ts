@@ -13,7 +13,11 @@ import {
   GetAggregateUserRefResponse,
   WithdrawUserRefCircleRequest,
 } from '@/referral/user-ref-circle.dto';
-import { PaginationQuery } from '@/common/dto/pagination.dto';
+import {
+  buildPaginateResponse,
+  PaginationQuery,
+  PaginationResponse,
+} from '@/common/dto/pagination.dto';
 import { ApiOkResponsePagination } from '@/common/dto/response.dto';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -59,8 +63,8 @@ export class UserRefCircleController {
   async getRefCircleInfo(
     @AuthUser('userId') userId: number,
     @Query() pagination: PaginationQuery,
-  ) {
-    return await this.userRefCircleService.userRefCirclePagination(
+  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+    const res = await this.userRefCircleService.userRefCirclePagination(
       {
         userId,
       },
@@ -69,6 +73,11 @@ export class UserRefCircleController {
         circleId: 'DESC',
       },
     );
+    if (res.isErr()) {
+      return buildPaginateResponse([], 0, 0);
+    } else {
+      return res.value;
+    }
   }
 
   @Get('aggregate')
@@ -79,7 +88,14 @@ export class UserRefCircleController {
   async getAggregateUserRef(
     @AuthUser('userId') userId: number,
   ): Promise<GetAggregateUserRefResponse> {
-    return await this.userRefCircleService.getAggregateUserRef(userId);
+    const res = await this.userRefCircleService.getAggregateUserRef(userId);
+    if (res.isErr()) {
+      return {
+        childCount: 0,
+        totalEarned: 0,
+      };
+    }
+    return res.value;
   }
 
   @Get(':circleId/children')
@@ -89,8 +105,8 @@ export class UserRefCircleController {
     @AuthUser('userId') userId: number,
     @Param('circleId') circleId: number,
     @Query() pagination: PaginationQuery,
-  ) {
-    return await this.userRefCircleService.userRefCirclePagination(
+  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+    const res = await this.userRefCircleService.userRefCirclePagination(
       {
         parentId: userId,
         circleId,
@@ -100,5 +116,10 @@ export class UserRefCircleController {
         contributeToParent: 'DESC',
       },
     );
+    if (res.isErr()) {
+      return buildPaginateResponse([], 0, 0);
+    } else {
+      return res.value;
+    }
   }
 }

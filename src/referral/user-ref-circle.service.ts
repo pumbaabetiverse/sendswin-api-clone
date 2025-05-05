@@ -20,6 +20,8 @@ import {
   createWithdrawSourceId,
   WithdrawType,
 } from '@/withdraw/withdraw.domain';
+import { err, ok, Result } from 'neverthrow';
+import { fromPromiseResult } from '@/common/errors';
 
 @Injectable()
 export class UserRefCircleService {
@@ -74,57 +76,55 @@ export class UserRefCircleService {
     parentId: number,
     amount: number,
     createdAt: Date,
-  ) {
-    try {
-      const circleId = this.generateCircleId(createdAt);
-      const userRefCircle = await this.userRefCircleRepository.findOne({
-        where: { userId, circleId },
-      });
+  ): Promise<Result<void, Error>> {
+    const circleId = this.generateCircleId(createdAt);
+    const userRefCircle = await this.userRefCircleRepository.findOne({
+      where: { userId, circleId },
+    });
 
-      if (!userRefCircle) {
-        await this.userRefCircleRepository.insert(
-          this.userRefCircleRepository.create({
-            circleId,
-            userId,
-            parentId,
-            contributeToParent: amount,
-            earnFromChild: 0,
-            isWithdrawn: false,
-          }),
-        );
-      } else {
-        userRefCircle.contributeToParent += amount;
-        await this.userRefCircleRepository.save(userRefCircle);
-      }
-
-      const parentRefCircle = await this.userRefCircleRepository.findOne({
-        where: { userId: parentId, circleId },
-      });
-
-      if (!parentRefCircle) {
-        const parentUser = await this.userService.findById(parentId);
-        if (!parentUser) {
-          return;
-        }
-        await this.userRefCircleRepository.insert(
-          this.userRefCircleRepository.create({
-            circleId,
-            userId: parentId,
-            parentId: parentUser.parentId,
-            isWithdrawn: false,
-            contributeToParent: 0,
-            earnFromChild: amount,
-          }),
-        );
-      } else {
-        parentRefCircle.earnFromChild += amount;
-        await this.userRefCircleRepository.save(parentRefCircle);
-      }
-    } catch (err) {
-      if (err instanceof Error) {
-        this.logger.error(err.message, err.stack);
-      }
+    if (!userRefCircle) {
+      await this.userRefCircleRepository.insert(
+        this.userRefCircleRepository.create({
+          circleId,
+          userId,
+          parentId,
+          contributeToParent: amount,
+          earnFromChild: 0,
+          isWithdrawn: false,
+        }),
+      );
+    } else {
+      userRefCircle.contributeToParent += amount;
+      await this.userRefCircleRepository.save(userRefCircle);
     }
+
+    const parentRefCircle = await this.userRefCircleRepository.findOne({
+      where: { userId: parentId, circleId },
+    });
+
+    if (!parentRefCircle) {
+      const parentUserResult = await this.userService.findById(parentId);
+      if (parentUserResult.isErr()) {
+        return err(parentUserResult.error);
+      }
+      if (!parentUserResult.value) {
+        return ok();
+      }
+      await this.userRefCircleRepository.insert(
+        this.userRefCircleRepository.create({
+          circleId,
+          userId: parentId,
+          parentId: parentUserResult.value.parentId,
+          isWithdrawn: false,
+          contributeToParent: 0,
+          earnFromChild: amount,
+        }),
+      );
+    } else {
+      parentRefCircle.earnFromChild += amount;
+      await this.userRefCircleRepository.save(parentRefCircle);
+    }
+    return ok();
   }
 
   async userRefCirclePagination(
@@ -133,15 +133,21 @@ export class UserRefCircleService {
       | FindOptionsWhere<UserRefCircleEntity>[],
     pagination: PaginationQuery,
     order: FindOptionsOrder<UserRefCircleEntity>,
-  ): Promise<PaginationResponse<UserRefCircleEntity>> {
+  ): Promise<Result<PaginationResponse<UserRefCircleEntity>, Error>> {
     const { limit, skip, page } = composePagination(pagination);
-    const [items, total] = await this.userRefCircleRepository.findAndCount({
-      where: options,
-      order,
-      skip,
-      take: limit,
-    });
-    return buildPaginateResponse(items, total, page, limit);
+    const result = await fromPromiseResult(
+      this.userRefCircleRepository.findAndCount({
+        where: options,
+        order,
+        skip,
+        take: limit,
+      }),
+    );
+    if (result.isErr()) {
+      return err(result.error);
+    }
+    const [items, total] = result.value;
+    return ok(buildPaginateResponse(items, total, page, limit));
   }
 
   async withdrawCircle(userId: number, circleId: number) {
@@ -184,29 +190,55 @@ export class UserRefCircleService {
     });
   }
 
-  async getAggregateUserRef(userId: number) {
-    const childCount = await this.userService.countUserChild(userId);
-    const totalEarned =
-      (await this.userRefCircleRepository.sum('earnFromChild', {
-        userId,
-      })) ?? 0;
-    return {
-      childCount,
-      totalEarned,
-    };
+  async getAggregateUserRef(userId: number): Promise<
+    Result<
+      {
+        childCount: number;
+        totalEarned: number;
+      },
+      Error
+    >
+  > {
+    const [childCountResult, totalEarnedResult] = await Promise.all([
+      this.userService.countUserChild(userId),
+      this.getTotalEarnedFromChild(userId),
+    ]);
+
+    if (childCountResult.isErr()) {
+      return err(childCountResult.error);
+    }
+
+    if (totalEarnedResult.isErr()) {
+      return err(totalEarnedResult.error);
+    }
+
+    return ok({
+      childCount: childCountResult.value,
+      totalEarned: totalEarnedResult.value,
+    });
   }
 
-  generateCircleId(date: Date = new Date()): number {
+  private generateCircleId(date: Date = new Date()): number {
     const year = dayjs(date).year();
     const weekNumber = dayjs(date).week();
 
     return year * 54 + weekNumber;
   }
 
-  getCircleInfo(circleId: number): { year: number; week: number } {
+  private getCircleInfo(circleId: number): { year: number; week: number } {
     const year = Math.floor(circleId / 54);
     const week = circleId % 54;
 
     return { year, week };
+  }
+
+  private async getTotalEarnedFromChild(
+    userId: number,
+  ): Promise<Result<number, Error>> {
+    return fromPromiseResult(
+      this.userRefCircleRepository.sum('earnFromChild', {
+        userId,
+      }),
+    ).map((value) => value ?? 0);
   }
 }

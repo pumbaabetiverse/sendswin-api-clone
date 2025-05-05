@@ -39,6 +39,7 @@ export class TeleAuthGuard implements CanActivate {
     private readonly authService: AuthService,
     private readonly authSignService: AuthSignService,
   ) {}
+
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<AppRequest>();
     const authorization = request.headers?.authorization;
@@ -57,10 +58,12 @@ export class TeleAuthGuard implements CanActivate {
     } else {
       try {
         const teleUser = this.authService.parseTeleUser(authorization);
-        const user = await this.authService.loginWithTele(teleUser);
-
+        const userResult = await this.authService.loginWithTele(teleUser);
+        if (userResult.isErr()) {
+          throw new UnauthorizedException();
+        }
         request.teleUser = teleUser;
-        request.auth = { userId: user.id };
+        request.auth = { userId: userResult.value.id };
       } catch {
         throw new UnauthorizedException();
       }

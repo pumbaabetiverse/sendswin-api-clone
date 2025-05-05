@@ -47,7 +47,7 @@ export class DepositsService {
     private readonly binanceService: BinanceService,
     private readonly settingService: SettingService,
     @InjectQueue('withdraw')
-    private withdrawQueue: Queue<WithdrawRequestQueueDto>,
+    private readonly withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: CacheService,
   ) {}
@@ -113,9 +113,14 @@ export class DepositsService {
       deposit.payerUsername = item.payerInfo.name;
 
       // Find user and validate
-      const user = await this.usersService.findByBinanceUsername(
+      const userResult = await this.usersService.findByBinanceUsername(
         item.payerInfo.name,
       );
+      if (userResult.isErr()) {
+        return err(userResult.error);
+      }
+      const user = userResult.value;
+
       if (!this.isValidUserForDeposit(user, deposit)) {
         return await this.saveDeposit(deposit);
       }

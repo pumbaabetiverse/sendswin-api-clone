@@ -1,9 +1,10 @@
-// src/users/users.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, UpdateResult } from 'typeorm';
 import { User } from '@/users/user.entity';
 import { isAddress } from 'viem';
+import { err, ok, Result } from 'neverthrow';
+import { fromPromiseResult } from '@/common/errors';
 
 @Injectable()
 export class UsersService {
@@ -12,20 +13,36 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async countUserChild(id: number): Promise<number> {
-    return this.usersRepository.countBy({
-      parentId: id,
-    });
+  async countUserChild(id: number): Promise<Result<number, Error>> {
+    return fromPromiseResult(
+      this.usersRepository.countBy({
+        parentId: id,
+      }),
+    );
   }
 
-  async findById(id: number): Promise<User | null> {
-    return this.usersRepository.findOneBy({
-      id,
-    });
+  async findById(id: number): Promise<Result<User | null, Error>> {
+    return fromPromiseResult(
+      this.usersRepository.findOneBy({
+        id,
+      }),
+    );
   }
 
-  async findByTelegramId(telegramId: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { telegramId } });
+  async findByTelegramId(
+    telegramId: string,
+  ): Promise<Result<User | null, Error>> {
+    return fromPromiseResult(
+      this.usersRepository.findOne({ where: { telegramId } }),
+    );
+  }
+
+  async findUserByRefCode(
+    refCode: string,
+  ): Promise<Result<User | null, Error>> {
+    return fromPromiseResult(
+      this.usersRepository.findOne({ where: { refCode } }),
+    );
   }
 
   async createOrUpdateUser(
@@ -33,77 +50,100 @@ export class UsersService {
     telegramFullName: string,
     chatId?: string,
     inviteCode?: string,
-  ): Promise<User> {
-    const existingUser = await this.findByTelegramId(telegramId);
+  ): Promise<Result<User, Error>> {
+    const existingUserResult = await this.findByTelegramId(telegramId);
+
+    if (existingUserResult.isErr()) {
+      return err(existingUserResult.error);
+    }
+
+    const existingUser = existingUserResult.value;
 
     if (existingUser) {
       if (chatId && existingUser.chatId !== chatId) {
         existingUser.chatId = chatId;
-        return await this.usersRepository.save(existingUser);
+        return this.saveUser(existingUser);
       }
-      return existingUser;
+      return ok(existingUser);
     }
 
     let parentId: number | undefined;
 
     if (inviteCode) {
-      const parentUser = await this.usersRepository.findOneBy({
-        refCode: inviteCode,
-      });
-      if (parentUser) {
-        parentId = parentUser.id;
+      const parentUserResult = await this.findUserByRefCode(inviteCode);
+      if (parentUserResult.isOk() && parentUserResult.value) {
+        parentId = parentUserResult.value.id;
       }
     }
 
-    const newUser = this.usersRepository.create({
-      telegramId,
-      telegramFullName,
-      chatId,
-      refCode: this.generateRandomString(8),
-      parentId,
-    });
-
-    return this.usersRepository.save(newUser);
+    return this.saveUser(
+      this.usersRepository.create({
+        telegramId,
+        telegramFullName,
+        chatId,
+        refCode: this.generateRandomString(8),
+        parentId,
+      }),
+    );
   }
 
   async updateWalletAddress(
     userId: number,
     walletAddress: string,
-  ): Promise<UpdateResult> {
+  ): Promise<Result<UpdateResult, Error>> {
     if (!isAddress(walletAddress)) {
-      throw new Error('Invalid wallet address');
+      return err(new Error('Invalid wallet address'));
     }
 
-    return await this.usersRepository.update(
-      {
-        id: userId,
-      },
-      {
-        walletAddress,
-      },
+    return fromPromiseResult(
+      this.usersRepository.update(
+        {
+          id: userId,
+        },
+        {
+          walletAddress,
+        },
+      ),
     );
   }
 
-  async findByBinanceUsername(binanceUsername: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { binanceUsername } });
+  async findByBinanceUsername(
+    binanceUsername: string,
+  ): Promise<Result<User | null, Error>> {
+    return fromPromiseResult(
+      this.usersRepository.findOne({ where: { binanceUsername } }),
+    );
   }
 
   async updateBinanceUsername(
     userId: number,
     binanceUsername: string,
-  ): Promise<UpdateResult> {
-    if (await this.findByBinanceUsername(binanceUsername)) {
-      throw new Error('Binance username already exists');
+  ): Promise<Result<UpdateResult, Error>> {
+    const existingUserResult =
+      await this.findByBinanceUsername(binanceUsername);
+
+    if (existingUserResult.isErr()) {
+      return err(existingUserResult.error);
     }
 
-    return await this.usersRepository.update(
-      {
-        id: userId,
-      },
-      {
-        binanceUsername,
-      },
+    if (existingUserResult.value) {
+      return err(new Error('Binance username already exists'));
+    }
+
+    return fromPromiseResult(
+      this.usersRepository.update(
+        {
+          id: userId,
+        },
+        {
+          binanceUsername,
+        },
+      ),
     );
+  }
+
+  private async saveUser(user: User): Promise<Result<User, Error>> {
+    return fromPromiseResult(this.usersRepository.save(user));
   }
 
   private generateRandomString(length: number): string {
