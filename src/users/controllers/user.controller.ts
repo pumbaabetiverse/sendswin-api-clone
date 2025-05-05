@@ -20,8 +20,8 @@ export class UserController {
   @ApiOkResponse({
     type: User,
   })
-  getMe(@AuthUser('userId') userId: number) {
-    return this.userService.findById(userId);
+  async getMe(@AuthUser('userId') userId: number): Promise<User | null> {
+    return (await this.userService.findById(userId)).unwrapOr(null);
   }
 
   @Post('me/wallet')
