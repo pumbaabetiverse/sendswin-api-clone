@@ -23,6 +23,7 @@ import { ApiOkResponsePagination } from '@/common/dto/response.dto';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { ActionResponse } from '@/common/dto/base.dto';
 import { CacheService } from '@/cache/cache.service';
+import { MoreThan } from 'typeorm';
 
 @Controller('user-ref-circle')
 export class UserRefCircleController {
@@ -110,6 +111,7 @@ export class UserRefCircleController {
       {
         parentId: userId,
         circleId,
+        contributeToParent: MoreThan(0),
       },
       pagination,
       {

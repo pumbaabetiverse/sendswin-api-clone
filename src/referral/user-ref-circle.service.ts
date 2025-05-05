@@ -170,11 +170,14 @@ export class UserRefCircleService {
     );
   }
 
-  async withdrawCircle(userId: number, circleId: number) {
+  async withdrawCircle(
+    userId: number,
+    circleId: number,
+  ): Promise<Result<void, Error>> {
     const currentCircleId = this.generateCircleId();
 
     if (circleId >= currentCircleId) {
-      throw new Error('Cannot withdraw from current or future circles');
+      return err(new Error('Cannot withdraw from current or future circles'));
     }
 
     const userRefCircle = await this.userRefCircleRepository.findOne({
@@ -182,11 +185,11 @@ export class UserRefCircleService {
     });
 
     if (!userRefCircle) {
-      throw new Error('User ref circle not found');
+      return err(new Error('User ref circle not found'));
     }
 
     if (userRefCircle.isWithdrawn) {
-      throw new Error('User ref circle is already withdrawn');
+      return err(new Error('User ref circle is already withdrawn'));
     }
 
     const minimumWithdraw = await this.settingService.getFloatSetting(
@@ -195,8 +198,8 @@ export class UserRefCircleService {
     );
 
     if (userRefCircle.earnFromChild < minimumWithdraw) {
-      throw new Error(
-        'Withdraw amount must be greater than ' + minimumWithdraw,
+      return err(
+        Error('Withdraw amount must be greater than ' + minimumWithdraw),
       );
     }
 
@@ -208,6 +211,7 @@ export class UserRefCircleService {
       payout: userRefCircle.earnFromChild,
       sourceId: createWithdrawSourceId(WithdrawType.REFERRAL, userRefCircle.id),
     });
+    return ok();
   }
 
   async getAggregateUserRef(userId: number): Promise<
