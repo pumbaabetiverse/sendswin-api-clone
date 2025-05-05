@@ -49,7 +49,14 @@ export class UserRefCircleController {
     if (result.isErr()) {
       return {
         success: false,
-        message: result.error.message,
+        message: 'Opps! Some things go wrong. Please try again later',
+      };
+    }
+
+    if (result.value.isErr()) {
+      return {
+        success: false,
+        message: result.value.error.message,
       };
     }
     return {
