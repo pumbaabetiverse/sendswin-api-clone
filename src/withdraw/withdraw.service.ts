@@ -18,6 +18,7 @@ import {
   WithdrawStatus,
 } from '@/withdraw/withdraw.domain';
 import { SettingService } from '@/setting/setting.service';
+import { NotificationService } from '@/notification/notification.service';
 
 @Injectable()
 export class WithdrawService {
@@ -30,6 +31,7 @@ export class WithdrawService {
     private readonly blockchainHelperService: BlockchainHelperService,
     private readonly eventEmitter: EventEmitter2,
     private readonly settingService: SettingService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async processUserWithdraw(
@@ -178,6 +180,7 @@ export class WithdrawService {
 
     // Notify the user via Telegram if possible
     this.notifyUserViaTelegram(user, payout, transactionHash);
+    this.sendAppNotification(user, payout, transactionHash);
 
     // Get transaction receipt
     const receiptResult =
@@ -206,15 +209,32 @@ export class WithdrawService {
     user: User,
     payout: number,
     txHash: string,
+    network: BlockchainNetwork = BlockchainNetwork.OPBNB,
   ): void {
     if (user.chatId) {
       this.eventEmitter.emit(EventName.TELEGRAM_WITHDRAW_PROCESSING, {
         userChatId: user.chatId,
         payout,
         txHash,
-        network: BlockchainNetwork.OPBNB,
+        network,
       } satisfies TelegramWithdrawProcessingEvent);
     }
+  }
+
+  private sendAppNotification(
+    user: User,
+    payout: number,
+    txHash: string,
+    network: BlockchainNetwork = BlockchainNetwork.OPBNB,
+  ): void {
+    this.notificationService.sendNotification(user.id, {
+      type: 'new_withdraw',
+      data: {
+        payout,
+        txHash,
+        network,
+      },
+    });
   }
 
   private async updateWithdrawBySourceId(

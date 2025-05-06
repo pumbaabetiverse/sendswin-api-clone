@@ -38,6 +38,7 @@ import {
   WithdrawType,
 } from '@/withdraw/withdraw.domain';
 import { fromPromiseResult } from '@/common/errors';
+import { NotificationService } from '@/notification/notification.service';
 
 @Injectable()
 export class DepositsService {
@@ -51,6 +52,7 @@ export class DepositsService {
     private readonly withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: CacheService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async historyPagination(
@@ -140,6 +142,8 @@ export class DepositsService {
 
     // Send a new game message on Telegram notification
     this.sendTelegramNotification(deposit, user!);
+
+    this.sendAppNotification(deposit, user!);
 
     // Add withdrawal winnings to the queue
     await this.addWinningWithdrawal(deposit, user!);
@@ -291,6 +295,19 @@ export class DepositsService {
         option: deposit.option!,
       } satisfies TelegramNewGameEvent);
     }
+  }
+
+  private sendAppNotification(deposit: Deposit, user: User): void {
+    this.notificationService.sendNotification(user.id, {
+      type: 'new_game',
+      data: {
+        orderId: deposit.orderId,
+        result: deposit.result,
+        amount: deposit.amount,
+        payout: deposit.payout,
+        option: deposit.option!,
+      },
+    });
   }
 
   private async addWinningWithdrawal(

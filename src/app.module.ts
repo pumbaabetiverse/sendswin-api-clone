@@ -20,6 +20,7 @@ import { EnvironmentVariables } from './common/types';
 import { HealthModule } from './health/health.module';
 import { GameModule } from './game/game.module';
 import { UserRefCircleModule } from '@/referral/user-ref-circle.module';
+import { NotificationModule } from '@/notification/notification.module';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -81,6 +82,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
         synchronize: configService.get('DB_SYNCHRONIZE', { infer: true }),
         logging: configService.get('DB_LOGGING', false, { infer: true }),
         autoLoadEntities: true,
+        poolSize: 15,
       }),
       async dataSourceFactory(options) {
         if (!options) {
@@ -146,6 +148,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     AuthModule,
     GameModule,
     UserRefCircleModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

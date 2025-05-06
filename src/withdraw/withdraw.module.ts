@@ -14,6 +14,7 @@ import { AdminWithdrawService } from '@/withdraw/services/admin.withdraw.service
 import { AdminWalletWithdrawService } from '@/withdraw/services/admin.wallet-withdraw.service';
 import { AdminWithdrawController } from '@/withdraw/controllers/admin.withdraw.controller';
 import { AdminWalletWithdrawController } from '@/withdraw/controllers/admin.wallet-withdraw.controller';
+import { NotificationModule } from '@/notification/notification.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AdminWalletWithdrawController } from '@/withdraw/controllers/admin.wall
     UsersModule,
     BlockchainModule,
     SettingModule,
+    NotificationModule,
   ],
   exports: [WithdrawService],
   providers: [

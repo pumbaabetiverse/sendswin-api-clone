@@ -11,6 +11,7 @@ import { SettingModule } from '@/setting/setting.module';
 import { AdminDepositController } from '@/deposits/controllers/admin.deposit.controller';
 import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
 import { CacheModule } from '@/cache/cache.module';
+import { NotificationModule } from '@/notification/notification.module';
 
 @Module({
   controllers: [AdminDepositController],
@@ -23,6 +24,7 @@ import { CacheModule } from '@/cache/cache.module';
       name: 'withdraw',
     }),
     CacheModule,
+    NotificationModule,
   ],
   providers: [DepositsService, DepositsScheduler, AdminDepositService],
   exports: [DepositsService],
