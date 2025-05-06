@@ -78,7 +78,7 @@ export class SettingService {
   }
 
   createCacheKey(key: string) {
-    return `settings:${key}`;
+    return `${key}`;
   }
 
   async getExposeSettings<const T extends string, R = Record<T, string>>(
