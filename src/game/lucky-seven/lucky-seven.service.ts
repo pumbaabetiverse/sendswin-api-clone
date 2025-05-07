@@ -14,11 +14,11 @@ export class LuckySevenService {
   ) {}
 
   async getRoundWallet(): Promise<LuckySevenRoundWallet> {
-    const wallet = await this.binanceService.getRandomActiveBinanceAccount(
+    const result = await this.binanceService.getCurrentRotateAccount(
       DepositOption.LUCKY_NUMBER,
     );
     return {
-      binanceQrCodeUrl: wallet?.binanceQrCodeUrl,
+      binanceQrCodeUrl: result.unwrapOr(null)?.binanceQrCodeUrl,
     };
   }
 

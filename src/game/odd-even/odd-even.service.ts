@@ -15,12 +15,12 @@ export class OddEvenService {
 
   async getRoundWallet(): Promise<OddEvenRoundWallet> {
     const [oddAccount, evenAccount] = await Promise.all([
-      this.binanceService.getRandomActiveBinanceAccount(DepositOption.ODD),
-      this.binanceService.getRandomActiveBinanceAccount(DepositOption.EVEN),
+      this.binanceService.getCurrentRotateAccount(DepositOption.ODD),
+      this.binanceService.getCurrentRotateAccount(DepositOption.EVEN),
     ]);
     return {
-      oddWallet: oddAccount?.binanceQrCodeUrl,
-      evenWallet: evenAccount?.binanceQrCodeUrl,
+      oddWallet: oddAccount.unwrapOr(null)?.binanceQrCodeUrl,
+      evenWallet: evenAccount.unwrapOr(null)?.binanceQrCodeUrl,
     };
   }
 

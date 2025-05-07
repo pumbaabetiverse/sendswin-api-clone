@@ -57,6 +57,9 @@ export class BinanceAccount {
   @Column({ default: '' })
   proxy: string; // Mandatory proxy configuration for Binance API
 
+  @Column({ default: new Date() })
+  lastUsedAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 }
