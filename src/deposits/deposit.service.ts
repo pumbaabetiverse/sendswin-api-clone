@@ -365,7 +365,7 @@ export class DepositsService {
     // Calculate payout if win
     let payout = 0;
     if (result === DepositResult.WIN) {
-      const multiplier = await this.getMultiplier(gameType);
+      const multiplier = await this.getMultiplier(gameType, option);
       payout = amount * multiplier;
     }
 
@@ -411,9 +411,16 @@ export class DepositsService {
 
   private async getMultiplier(
     gameType: 'ODD_EVEN' | 'LUCKY_NUMBER',
+    option: DepositOption,
   ): Promise<number> {
+    const settingKey =
+      gameType === 'ODD_EVEN'
+        ? SettingKey[
+            `${option == DepositOption.ODD ? 'ODD' : 'EVEN'}_MULTIPLIER`
+          ]
+        : SettingKey[`${gameType}_MULTIPLIER`];
     return await this.settingService.getFloatSetting(
-      SettingKey[`${gameType}_MULTIPLIER`],
+      settingKey,
       gameType === 'ODD_EVEN' ? 1.95 : 300,
     );
   }
