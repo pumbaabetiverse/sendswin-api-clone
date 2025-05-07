@@ -58,3 +58,5 @@ Before submitting changes, Junie should:
     - Utilize TypeScript's utility types (Partial, Pick, Omit, etc.) when appropriate
     - Consider enabling stricter TypeScript compiler options
     - Use type guards to narrow types when necessary
+8. Generated files:
+    - Always skip reading and modifying the `src/common/binance-schema.gen.ts` file as it is auto-generated

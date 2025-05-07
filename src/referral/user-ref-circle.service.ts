@@ -79,52 +79,21 @@ export class UserRefCircleService {
     createdAt: Date,
   ): Promise<Result<void, Error>> {
     const circleId = this.generateCircleId(createdAt);
-    const userRefCircle = await this.userRefCircleRepository.findOne({
-      where: { userId, circleId },
-    });
-
-    if (!userRefCircle) {
-      await this.userRefCircleRepository.insert(
-        this.userRefCircleRepository.create({
-          circleId,
-          userId,
-          parentId,
-          contributeToParent: amount,
-          earnFromChild: 0,
-          isWithdrawn: false,
-        }),
-      );
-    } else {
-      userRefCircle.contributeToParent += amount;
-      await this.userRefCircleRepository.save(userRefCircle);
+    const parentUser = (await this.userService.findById(parentId)).unwrapOr(
+      null,
+    );
+    if (!parentUser) {
+      return err(new Error('Parent user not found'));
     }
+    await this.createOrUpdateUserCircle(circleId, userId, parentId, amount, 0);
+    await this.createOrUpdateUserCircle(
+      circleId,
+      parentId,
+      parentUser.parentId,
+      0,
+      amount,
+    );
 
-    const parentRefCircle = await this.userRefCircleRepository.findOne({
-      where: { userId: parentId, circleId },
-    });
-
-    if (!parentRefCircle) {
-      const parentUserResult = await this.userService.findById(parentId);
-      if (parentUserResult.isErr()) {
-        return err(parentUserResult.error);
-      }
-      if (!parentUserResult.value) {
-        return ok();
-      }
-      await this.userRefCircleRepository.insert(
-        this.userRefCircleRepository.create({
-          circleId,
-          userId: parentId,
-          parentId: parentUserResult.value.parentId,
-          isWithdrawn: false,
-          contributeToParent: 0,
-          earnFromChild: amount,
-        }),
-      );
-    } else {
-      parentRefCircle.earnFromChild += amount;
-      await this.userRefCircleRepository.save(parentRefCircle);
-    }
     return ok();
   }
 
@@ -240,6 +209,47 @@ export class UserRefCircleService {
       childCount: childCountResult.value,
       totalEarned: totalEarnedResult.value,
     });
+  }
+
+  private async createOrUpdateUserCircle(
+    circleId: number,
+    userId: number,
+    parentId: number | undefined,
+    contributeToParent: number,
+    earnFromChild: number,
+  ): Promise<Result<UserRefCircleEntity, Error>> {
+    const userRefCircleResult = await fromPromiseResult(
+      this.userRefCircleRepository.findOne({
+        where: { circleId, userId },
+      }),
+    );
+
+    if (userRefCircleResult.isErr()) {
+      return err(userRefCircleResult.error);
+    }
+
+    const userRefCircle = userRefCircleResult.value;
+
+    if (userRefCircle) {
+      userRefCircle.contributeToParent += contributeToParent;
+      userRefCircle.earnFromChild += earnFromChild;
+      return fromPromiseResult(
+        this.userRefCircleRepository.save(userRefCircle),
+      );
+    }
+
+    return fromPromiseResult(
+      this.userRefCircleRepository.save(
+        this.userRefCircleRepository.create({
+          circleId,
+          userId,
+          parentId,
+          contributeToParent,
+          earnFromChild,
+          isWithdrawn: false,
+        }),
+      ),
+    );
   }
 
   private generateCircleId(date: Date = new Date()): number {
