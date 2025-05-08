@@ -1,11 +1,11 @@
 // binance-client.ts
 
 import { paths } from '@/common/binance-schema.gen';
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { err, Result } from 'neverthrow';
-import { fromPromiseResult, fromSyncResult } from '@/common/errors';
+import { err, ok, Result } from 'neverthrow';
+import { fromSyncResult, toErr } from '@/common/errors';
 
 /**
  * Cấu hình client Binance
@@ -157,8 +157,18 @@ export class BinanceClient {
   private async sendRequest<T>(
     config: AxiosRequestConfig,
   ): Promise<Result<T, Error>> {
-    return fromPromiseResult(this.client.request<T>(config)).map(
-      (value) => value.data,
-    );
+    try {
+      const res = await this.client.request<T>(config);
+      return ok(res.data);
+    } catch (e) {
+      if (e instanceof AxiosError) {
+        return err(
+          new Error(
+            `Binance API error: ${e.response?.status} - ${JSON.stringify(e.response?.data)}`,
+          ),
+        );
+      }
+      return toErr(e);
+    }
   }
 }
