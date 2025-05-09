@@ -15,6 +15,7 @@ import { AdminWalletWithdrawService } from '@/withdraw/services/admin.wallet-wit
 import { AdminWithdrawController } from '@/withdraw/controllers/admin.withdraw.controller';
 import { AdminWalletWithdrawController } from '@/withdraw/controllers/admin.wallet-withdraw.controller';
 import { NotificationModule } from '@/notification/notification.module';
+import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationModule } from '@/notification/notification.module';
     BlockchainModule,
     SettingModule,
     NotificationModule,
+    TelegramAdminModule,
   ],
   exports: [WithdrawService],
   providers: [

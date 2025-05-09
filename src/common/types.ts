@@ -19,6 +19,7 @@ export interface EnvironmentVariables {
   NEST_PASSWORD_SECRET: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_BOT_SECRET_TOKEN: string;
+  TELEGRAM_ADMIN_BOT_TOKEN: string;
 
   NEST_ENABLE_OPENAPI_DOC: 'true' | 'false';
 

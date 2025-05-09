@@ -25,6 +25,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     GameModule,
     UserRefCircleModule,
     NotificationModule,
+    TelegramAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

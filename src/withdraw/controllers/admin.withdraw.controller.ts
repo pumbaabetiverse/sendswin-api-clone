@@ -16,6 +16,7 @@ import {
   DirectWithdrawRequestDto,
   RefundRequestDto,
 } from '@/withdraw/dto/refund.dto';
+import { TelegramAdminService } from '@/telegram-admin/telegram-admin.service';
 
 @Crud({
   model: {
@@ -33,7 +34,10 @@ import {
 export class AdminWithdrawController implements CrudController<Withdraw> {
   private readonly logger = new Logger(AdminWithdrawController.name);
 
-  constructor(public service: AdminWithdrawService) {}
+  constructor(
+    public service: AdminWithdrawService,
+    private readonly telegramAdminService: TelegramAdminService,
+  ) {}
 
   @Post('actions/refund')
   @HttpCode(HttpStatus.OK)
@@ -43,18 +47,25 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
       body.amount,
       body.txId,
     );
-    if (result.isOk()) {
-      return {
-        success: true,
-        message: 'Refund request sent',
-      };
-    } else {
+
+    if (result.isErr()) {
       this.logger.error(result.error.message, result.error.stack);
+      this.telegramAdminService.notify(
+        `Failed to refund to user ${body.userId} with ${body.amount} USDT due to ${result.error.message}`,
+      );
       return {
         success: false,
         message: result.error.message,
       };
     }
+
+    this.telegramAdminService.notify(
+      `Successfully refunded to user ${body.userId} with ${body.amount} USDT, source id: ${body.txId}`,
+    );
+    return {
+      success: true,
+      message: 'Refund request sent',
+    };
   }
 
   @Post('actions/direct-withdraw')
@@ -67,7 +78,11 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
       body.amount,
       body.walletWithdrawId,
     );
+
     if (result.isErr()) {
+      this.telegramAdminService.notify(
+        `Failed to direct withdraw from pool ${body.walletWithdrawId} to ${body.toAddress} with ${body.amount} USDT due to ${result.error.message}`,
+      );
       this.logger.error(result.error.message, result.error.stack);
       return {
         success: false,
@@ -75,6 +90,9 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
       };
     }
 
+    this.telegramAdminService.notify(
+      `Successfully direct withdraw from pool ${body.walletWithdrawId} to ${body.toAddress} with ${body.amount} USDT, txHash: ${result.value}`,
+    );
     return {
       success: true,
       message: result.value,

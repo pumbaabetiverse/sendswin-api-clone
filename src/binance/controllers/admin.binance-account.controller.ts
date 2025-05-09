@@ -15,6 +15,7 @@ import { AdminBinanceAccountService } from '../services/admin.binance-account.se
 import { ActionResponse, NoticeResponse } from '@/common/dto/base.dto';
 import { BlockchainNetwork, BlockchainToken } from '@/common/const';
 import { ApiProperty } from '@nestjs/swagger';
+import { TelegramAdminService } from '@/telegram-admin/telegram-admin.service';
 
 export class ManualWithdrawRequest {
   @ApiProperty()
@@ -65,7 +66,10 @@ export class AdminBinanceAccountController
 {
   private readonly logger = new Logger(AdminBinanceAccountController.name);
 
-  constructor(public service: AdminBinanceAccountService) {}
+  constructor(
+    public service: AdminBinanceAccountService,
+    private readonly telegramAdminService: TelegramAdminService,
+  ) {}
 
   @Patch('actions/sync-balance')
   @HttpCode(HttpStatus.OK)
@@ -87,17 +91,22 @@ export class AdminBinanceAccountController
       request.walletAddress,
     );
 
-    if (result.isOk()) {
-      return {
-        success: true,
-        message: '',
-      };
-    } else {
+    if (result.isErr()) {
       this.logger.error(result.error.message, result.error.stack);
+      this.telegramAdminService.notify(
+        `Failed to manual submit withdraw request from account ${request.accountId} to ${request.walletAddress} with ${request.amount} ${request.symbol} on ${request.network} network due to ${result.error.message}.`,
+      );
       return {
         success: false,
         message: result.error.message,
       };
     }
+    this.telegramAdminService.notify(
+      `Successfully manual submit withdraw request from account ${request.accountId} to ${request.walletAddress} with ${request.amount} ${request.symbol} on ${request.network} network, requestId: ${result.value}`,
+    );
+    return {
+      success: true,
+      message: '',
+    };
   }
 }

@@ -7,6 +7,7 @@ import { AdminBinanceAccountController } from './controllers/admin.binance-accou
 import { SettingModule } from '@/setting/setting.module';
 import { BinanceScheduler } from '@/binance/binance.scheduler';
 import { CacheModule } from '@/cache/cache.module';
+import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
 
 @Module({
   controllers: [AdminBinanceAccountController],
@@ -14,6 +15,7 @@ import { CacheModule } from '@/cache/cache.module';
     TypeOrmModule.forFeature([BinanceAccount]),
     SettingModule,
     CacheModule,
+    TelegramAdminModule,
   ],
   exports: [BinanceService],
   providers: [BinanceService, AdminBinanceAccountService, BinanceScheduler],
