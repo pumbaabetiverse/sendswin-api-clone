@@ -126,8 +126,17 @@ export class WithdrawService {
     id: number,
   ): Promise<Result<WalletWithdraw | null, Error>> {
     return fromPromiseResult(
-      this.walletWithdrawRepository.findOneBy({
-        id,
+      this.walletWithdrawRepository.findOne({
+        where: {
+          id,
+        },
+        select: [
+          'id',
+          'address',
+          'privateKey',
+          'lastUsedAt',
+          'balanceUsdtOpBnb',
+        ],
       }),
     );
   }
