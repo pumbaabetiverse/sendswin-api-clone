@@ -103,7 +103,7 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
     }
 
     this.telegramAdminService.notify(
-      `❌ *Manual Withdraw Failed*\n\n` +
+      `✅ *Manual Withdraw Success*\n\n` +
         `📤 *From:* Pool #${body.walletWithdrawId}\n` +
         `📬 *To:* \`${body.toAddress}\`\n` +
         `💰 *Amount:* ${body.amount} USDT\n` +
