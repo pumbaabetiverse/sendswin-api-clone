@@ -94,15 +94,24 @@ export class AdminBinanceAccountController
     if (result.isErr()) {
       this.logger.error(result.error.message, result.error.stack);
       this.telegramAdminService.notify(
-        `Failed to manual submit withdraw request from account ${request.accountId} to ${request.walletAddress} with ${request.amount} ${request.symbol} on ${request.network} network due to ${result.error.message}.`,
+        `❌ *Manual Withdraw Failed*\n\n` +
+          `📤 *From:* Binance Account #${request.accountId}\n` +
+          `📬 *To:* \`${request.walletAddress}\`\n` +
+          `💰 *Amount:* ${request.amount} ${request.symbol}\n` +
+          `⚠️ *Error:* \`${result.error.message}\``,
       );
+
       return {
         success: false,
         message: result.error.message,
       };
     }
     this.telegramAdminService.notify(
-      `Successfully manual submit withdraw request from account ${request.accountId} to ${request.walletAddress} with ${request.amount} ${request.symbol} on ${request.network} network, requestId: ${result.value}`,
+      `✅ *Manual Withdraw Success*\n\n` +
+        `📤 *From:* Binance Account #${request.accountId}\n` +
+        `📬 *To:* \`${request.walletAddress}\`\n` +
+        `💰 *Amount:* ${request.amount} ${request.symbol}\n` +
+        `🆔 *Request ID:* \`${result.value}\`\n`,
     );
     return {
       success: true,

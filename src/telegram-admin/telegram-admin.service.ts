@@ -35,11 +35,17 @@ export class TelegramAdminService {
     });
   }
 
-  notify(message: string) {
+  notify(
+    message: string,
+    extra: ExtraReplyMessage = {},
+  ): Result<boolean, Error> {
     return fromSyncResult(() =>
       this.eventEmitter.emit(EventName.TELEGRAM_ADMIN_MESSAGE, {
         message,
-        extra: {},
+        extra: {
+          parse_mode: 'Markdown',
+          ...extra,
+        },
       } satisfies TelegramAdminNewMessageDto),
     );
   }

@@ -51,7 +51,11 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
     if (result.isErr()) {
       this.logger.error(result.error.message, result.error.stack);
       this.telegramAdminService.notify(
-        `Failed to refund to user ${body.userId} with ${body.amount} USDT due to ${result.error.message}`,
+        `❌ *Refund Failed*\n\n` +
+          `📤 *From:* *Pool*\n` +
+          `📬 *To:* \`User #${body.userId}\`\n` +
+          `💰 *Amount:* ${body.amount} USDT\n` +
+          `⚠️ *Error:* \`${result.error.message}\``,
       );
       return {
         success: false,
@@ -60,7 +64,11 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
     }
 
     this.telegramAdminService.notify(
-      `Successfully refunded to user ${body.userId} with ${body.amount} USDT, source id: ${body.txId}`,
+      `✅ *Refund Success*\n\n` +
+        `📤 *From:* *Pool*\n` +
+        `📬 *To:* \`User #${body.userId}\`\n` +
+        `💰 *Amount:* ${body.amount} USDT\n` +
+        `🆔 *Source ID:* \`${body.txId}\`\n`,
     );
     return {
       success: true,
@@ -81,7 +89,11 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
 
     if (result.isErr()) {
       this.telegramAdminService.notify(
-        `Failed to direct withdraw from pool ${body.walletWithdrawId} to ${body.toAddress} with ${body.amount} USDT due to ${result.error.message}`,
+        `❌ *Manual Withdraw Failed*\n\n` +
+          `📤 *From:* Pool #${body.walletWithdrawId}\n` +
+          `📬 *To:* \`${body.toAddress}\`\n` +
+          `💰 *Amount:* ${body.amount} USDT\n` +
+          `⚠️ *Error:* \`${result.error.message}\``,
       );
       this.logger.error(result.error.message, result.error.stack);
       return {
@@ -91,7 +103,11 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
     }
 
     this.telegramAdminService.notify(
-      `Successfully direct withdraw from pool ${body.walletWithdrawId} to ${body.toAddress} with ${body.amount} USDT, txHash: ${result.value}`,
+      `❌ *Manual Withdraw Failed*\n\n` +
+        `📤 *From:* Pool #${body.walletWithdrawId}\n` +
+        `📬 *To:* \`${body.toAddress}\`\n` +
+        `💰 *Amount:* ${body.amount} USDT\n` +
+        `🆔 *Tx Hash:* \`${result.value}\`\n`,
     );
     return {
       success: true,

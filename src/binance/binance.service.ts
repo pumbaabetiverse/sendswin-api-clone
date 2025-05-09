@@ -12,6 +12,7 @@ import { CacheService } from '@/cache/cache.service';
 import { fromPromiseResult } from '@/common/errors';
 import { SettingService } from '@/setting/setting.service';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
+import { TelegramAdminService } from '@/telegram-admin/telegram-admin.service';
 
 @Injectable()
 export class BinanceService {
@@ -20,6 +21,7 @@ export class BinanceService {
     private readonly binanceAccountsRepository: Repository<BinanceAccount>,
     private readonly cacheService: CacheService,
     private readonly settingService: SettingService,
+    private readonly telegramAdminService: TelegramAdminService,
   ) {}
 
   async getActiveBinanceAccounts(): Promise<BinanceAccount[]> {
@@ -96,7 +98,27 @@ export class BinanceService {
       return err(nextResult.error);
     }
 
-    return (await this.withdrawToPool(currentAccount)).map(() => undefined);
+    const withdrawResult = await this.withdrawToPool(currentAccount);
+    if (withdrawResult.isErr()) {
+      this.telegramAdminService.notify(
+        `❌ *Auto Withdrawal Failed *\n\n` +
+          `📤 *From:* Binance Account #${currentAccount.id}\n` +
+          `📬 *To:* *Pool*\n` +
+          `💰 *Amount:* ${currentAccount.usdtBalance} USDT\n` +
+          `⚠️ *Error:* \`${withdrawResult.error.message}\`\n`,
+      );
+
+      return err(withdrawResult.error);
+    }
+    this.telegramAdminService.notify(
+      `✅ *Auto Withdrawal Successful*\n\n` +
+        `📤 *From:* Binance Account #${currentAccount.id}\n` +
+        `📬 *To:* *Pool*\n` +
+        `💰 *Amount:* ${currentAccount.usdtBalance} USDT\n` +
+        `🆔 *Request ID:* \`${withdrawResult.value}\`\n`,
+    );
+
+    return ok();
   }
 
   private async withdrawToPool(
