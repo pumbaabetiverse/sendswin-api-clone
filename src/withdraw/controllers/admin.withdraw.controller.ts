@@ -12,7 +12,10 @@ import { Crud, CrudController } from '@dataui/crud';
 import { ActionResponse } from '@/common/dto/base.dto';
 import { Withdraw } from '@/withdraw/withdraw.entity';
 import { AdminWithdrawService } from '@/withdraw/services/admin.withdraw.service';
-import { RefundRequestDto } from '../dto/refund.dto';
+import {
+  DirectWithdrawRequestDto,
+  RefundRequestDto,
+} from '@/withdraw/dto/refund.dto';
 
 @Crud({
   model: {
@@ -52,5 +55,29 @@ export class AdminWithdrawController implements CrudController<Withdraw> {
         message: result.error.message,
       };
     }
+  }
+
+  @Post('actions/direct-withdraw')
+  @HttpCode(HttpStatus.OK)
+  async directWithdraw(
+    @Body() body: DirectWithdrawRequestDto,
+  ): Promise<ActionResponse> {
+    const result = await this.service.directWithdrawFromPool(
+      body.toAddress,
+      body.amount,
+      body.walletWithdrawId,
+    );
+    if (result.isErr()) {
+      this.logger.error(result.error.message, result.error.stack);
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
+
+    return {
+      success: true,
+      message: result.value,
+    };
   }
 }

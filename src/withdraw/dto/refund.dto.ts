@@ -5,3 +5,9 @@ export class RefundRequestDto {
   // uuid generated from the client to avoid duplicate refund request
   txId: string;
 }
+
+export class DirectWithdrawRequestDto {
+  walletWithdrawId: number;
+  amount: number;
+  toAddress: string;
+}

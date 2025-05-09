@@ -34,6 +34,28 @@ export class WithdrawService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  async processDirectWithdraw(
+    toAddress: string,
+    payout: number,
+    fromWalletId: number,
+  ): Promise<Result<string, Error>> {
+    const walletResult = await this.getWalletWithdrawById(fromWalletId);
+    if (walletResult.isErr()) {
+      return err(walletResult.error);
+    }
+    const wallet = walletResult.value;
+    if (!wallet) {
+      return err(new Error('Wallet not found'));
+    }
+    return this.blockchainHelperService.transferToken(
+      wallet.privateKey,
+      toAddress,
+      BlockchainToken.USDT,
+      BlockchainNetwork.OPBNB,
+      payout,
+    );
+  }
+
   async processUserWithdraw(
     userId: number,
     payout: number,
@@ -98,6 +120,16 @@ export class WithdrawService {
       }
     }
     return (await this.saveAllWallets(wallets)).map(() => undefined);
+  }
+
+  private async getWalletWithdrawById(
+    id: number,
+  ): Promise<Result<WalletWithdraw | null, Error>> {
+    return fromPromiseResult(
+      this.walletWithdrawRepository.findOneBy({
+        id,
+      }),
+    );
   }
 
   private async getAllWallets(): Promise<Result<WalletWithdraw[], Error>> {
