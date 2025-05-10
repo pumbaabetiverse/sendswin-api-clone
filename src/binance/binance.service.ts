@@ -135,7 +135,7 @@ export class BinanceService {
         `❌ *Auto Withdrawal Failed *\n\n` +
           `📤 *From:* Binance Account #${currentAccount.id}\n` +
           `📬 *To:* *Pool*\n` +
-          `💰 *Amount:* ${currentAccount.usdtBalance} USDT\n` +
+          `💰 *Amount:* ${Math.floor(currentAccount.usdtBalance)} USDT\n` +
           `⚠️ *Error:* \`${withdrawResult.error.message}\`\n`,
       );
 
@@ -145,7 +145,7 @@ export class BinanceService {
       `✅ *Auto Withdrawal Successful*\n\n` +
         `📤 *From:* Binance Account #${currentAccount.id}\n` +
         `📬 *To:* *Pool*\n` +
-        `💰 *Amount:* ${currentAccount.usdtBalance} USDT\n` +
+        `💰 *Amount:* ${Math.floor(currentAccount.usdtBalance)} USDT\n` +
         `🆔 *Request ID:* \`${withdrawResult.value}\`\n`,
     );
 
@@ -171,7 +171,7 @@ export class BinanceService {
         BlockchainToken.USDT,
         poolAddress,
         BlockchainNetwork.OPBNB,
-        account.usdtBalance - 0.1,
+        Math.floor(account.usdtBalance),
       )
     ).map((value) => value.id);
   }
