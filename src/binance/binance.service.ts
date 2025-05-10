@@ -13,6 +13,7 @@ import { fromPromiseResult } from '@/common/errors';
 import { SettingService } from '@/setting/setting.service';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import { TelegramAdminService } from '@/telegram-admin/telegram-admin.service';
+import Big from 'big.js';
 
 @Injectable()
 export class BinanceService {
@@ -78,10 +79,40 @@ export class BinanceService {
     return result.map((value) => value.data);
   }
 
+  private async syncAccountBalance(
+    account: BinanceAccount,
+    symbol: BlockchainToken,
+  ): Promise<Result<BinanceAccount, Error>> {
+    const binanceClient = new BinanceClient({
+      apiKey: account.binanceApiKey,
+      apiSecret: account.binanceApiSecret,
+      proxy: account.proxy,
+    });
+    const balanceResult = await binanceClient.getAccountBalanceBySymbol(symbol);
+
+    if (balanceResult.isErr()) {
+      return err(balanceResult.error);
+    }
+
+    account.usdtBalance = Big(balanceResult.value).toNumber();
+
+    return fromPromiseResult(this.binanceAccountsRepository.save(account));
+  }
+
+  private async getCurrentRotateSyncedAccount(
+    option: DepositOption,
+  ): Promise<Result<BinanceAccount, Error>> {
+    const currentResult = await this.getCurrentRotateAccount(option);
+    if (currentResult.isErr()) {
+      return err(currentResult.error);
+    }
+    return this.syncAccountBalance(currentResult.value, BlockchainToken.USDT);
+  }
+
   private async processRotateAccountAndWithdrawToPool(
     option: DepositOption,
   ): Promise<Result<void, Error>> {
-    const currentResult = await this.getCurrentRotateAccount(option);
+    const currentResult = await this.getCurrentRotateSyncedAccount(option);
     if (currentResult.isErr()) {
       return err(currentResult.error);
     }
