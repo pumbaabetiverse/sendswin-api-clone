@@ -1,5 +1,9 @@
-// src/users/user.entity.ts
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -26,4 +30,7 @@ export class User {
 
   @Column({ nullable: true })
   binanceUsername?: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }
