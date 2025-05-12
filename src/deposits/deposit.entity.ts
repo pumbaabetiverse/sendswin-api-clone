@@ -99,6 +99,11 @@ export class Deposit {
   })
   payerUsername?: string;
 
+  @Column({
+    nullable: true,
+  })
+  toBinanceAccountId?: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

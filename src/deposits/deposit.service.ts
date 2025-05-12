@@ -232,6 +232,7 @@ export class DepositsService {
     deposit.option = account.option;
     deposit.payout = 0;
     deposit.result = DepositResult.VOID;
+    deposit.toBinanceAccountId = account.id;
 
     return deposit;
   }
