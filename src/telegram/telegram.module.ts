@@ -3,6 +3,7 @@ import { TelegramService } from '@/telegram/telegram.service';
 import { TelegramUpdate } from '@/telegram/telegram.update';
 import { SettingModule } from '@/setting/setting.module';
 import { BullModule } from '@nestjs/bullmq';
+import { TelegramProcessor } from '@/telegram/telegram.processor';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { BullModule } from '@nestjs/bullmq';
       },
     }),
   ],
-  providers: [TelegramService, TelegramUpdate],
+  providers: [TelegramService, TelegramUpdate, TelegramProcessor],
   exports: [TelegramService],
 })
 export class TelegramModule {}
