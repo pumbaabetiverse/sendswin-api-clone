@@ -7,9 +7,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository, UpdateResult } from 'typeorm';
 import { err, ok, Result } from 'neverthrow';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { EventName } from '@/common/event-name';
-import { TelegramWithdrawProcessingEvent } from '@/telegram/telegram.dto';
 import { User } from '@/users/user.entity';
 import { fromPromiseResult } from '@/common/errors';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
@@ -18,7 +15,7 @@ import {
   WithdrawStatus,
 } from '@/withdraw/withdraw.domain';
 import { SettingService } from '@/setting/setting.service';
-import { NotificationService } from '@/notification/notification.service';
+import { WithdrawNotificationService } from '@/withdraw/withdraw-notification.service';
 
 @Injectable()
 export class WithdrawService {
@@ -29,9 +26,8 @@ export class WithdrawService {
     private readonly walletWithdrawRepository: Repository<WalletWithdraw>,
     private readonly usersService: UsersService,
     private readonly blockchainHelperService: BlockchainHelperService,
-    private readonly eventEmitter: EventEmitter2,
     private readonly settingService: SettingService,
-    private readonly notificationService: NotificationService,
+    private readonly withdrawNotificationService: WithdrawNotificationService,
   ) {}
 
   async processDirectWithdraw(
@@ -219,9 +215,12 @@ export class WithdrawService {
       status: WithdrawStatus.PROCESSING,
     });
 
-    // Notify the user via Telegram if possible
-    this.notifyUserViaTelegram(user, payout, transactionHash);
-    this.sendAppNotification(user, payout, transactionHash);
+    await this.withdrawNotificationService.sendUserWithdrawNotification(
+      user,
+      payout,
+      transactionHash,
+      BlockchainNetwork.OPBNB,
+    );
 
     // Get transaction receipt
     const receiptResult =
@@ -244,38 +243,6 @@ export class WithdrawService {
     });
 
     return ok();
-  }
-
-  private notifyUserViaTelegram(
-    user: User,
-    payout: number,
-    txHash: string,
-    network: BlockchainNetwork = BlockchainNetwork.OPBNB,
-  ): void {
-    if (user.chatId) {
-      this.eventEmitter.emit(EventName.TELEGRAM_WITHDRAW_PROCESSING, {
-        userChatId: user.chatId,
-        payout,
-        txHash,
-        network,
-      } satisfies TelegramWithdrawProcessingEvent);
-    }
-  }
-
-  private sendAppNotification(
-    user: User,
-    payout: number,
-    txHash: string,
-    network: BlockchainNetwork = BlockchainNetwork.OPBNB,
-  ): void {
-    this.notificationService.sendNotification(user.id, {
-      type: 'new_withdraw',
-      data: {
-        payout,
-        txHash,
-        network,
-      },
-    });
   }
 
   private async updateWithdrawBySourceId(

@@ -12,6 +12,8 @@ import { AdminDepositController } from '@/deposits/controllers/admin.deposit.con
 import { AdminDepositService } from '@/deposits/services/admin.deposit.service';
 import { CacheModule } from '@/cache/cache.module';
 import { NotificationModule } from '@/notification/notification.module';
+import { DepositNotificationService } from '@/deposits/deposit-notification.service';
+import { TelegramModule } from '@/telegram/telegram.module';
 
 @Module({
   controllers: [AdminDepositController],
@@ -22,11 +24,21 @@ import { NotificationModule } from '@/notification/notification.module';
     SettingModule,
     BullModule.registerQueue({
       name: 'withdraw',
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
     }),
+    TelegramModule,
     CacheModule,
     NotificationModule,
   ],
-  providers: [DepositsService, DepositsScheduler, AdminDepositService],
+  providers: [
+    DepositsService,
+    DepositsScheduler,
+    AdminDepositService,
+    DepositNotificationService,
+  ],
   exports: [DepositsService],
 })
 export class DepositsModule {}

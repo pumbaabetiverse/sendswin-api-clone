@@ -28,7 +28,6 @@ import { FindOptionsWhere, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
-import { TelegramNewGameEvent } from '@/telegram/telegram.dto';
 import { BinanceAccount } from '@/binance/binance.entity';
 import { CacheService } from '@/cache/cache.service';
 import { User } from '@/users/user.entity';
@@ -38,7 +37,7 @@ import {
   WithdrawType,
 } from '@/withdraw/withdraw.domain';
 import { fromPromiseResult } from '@/common/errors';
-import { NotificationService } from '@/notification/notification.service';
+import { DepositNotificationService } from '@/deposits/deposit-notification.service';
 
 @Injectable()
 export class DepositsService {
@@ -52,7 +51,7 @@ export class DepositsService {
     private readonly withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: CacheService,
-    private readonly notificationService: NotificationService,
+    private readonly depositNotificationService: DepositNotificationService,
   ) {}
 
   async historyPagination(
@@ -141,9 +140,10 @@ export class DepositsService {
     this.addReferralContribution(deposit, user!);
 
     // Send a new game message on Telegram notification
-    this.sendTelegramNotification(deposit, user!);
-
-    this.sendAppNotification(deposit, user!);
+    await this.depositNotificationService.sendNewGameNotification(
+      user!,
+      deposit,
+    );
 
     // Add withdrawal winnings to the queue
     await this.addWinningWithdrawal(deposit, user!);
@@ -283,32 +283,6 @@ export class DepositsService {
         depositResult: deposit.result,
       } satisfies RefContributeEvent);
     }
-  }
-
-  private sendTelegramNotification(deposit: Deposit, user: User): void {
-    if (user.chatId) {
-      this.eventEmitter.emit(EventName.TELEGRAM_NEW_GAME, {
-        userChatId: user.chatId,
-        orderId: deposit.orderId,
-        result: deposit.result,
-        amount: deposit.amount,
-        payout: deposit.payout,
-        option: deposit.option!,
-      } satisfies TelegramNewGameEvent);
-    }
-  }
-
-  private sendAppNotification(deposit: Deposit, user: User): void {
-    this.notificationService.sendNotification(user.id, {
-      type: 'new_game',
-      data: {
-        orderId: deposit.orderId,
-        result: deposit.result,
-        amount: deposit.amount,
-        payout: deposit.payout,
-        option: deposit.option!,
-      },
-    });
   }
 
   private async addWinningWithdrawal(

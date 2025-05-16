@@ -2,7 +2,7 @@ import { EnvironmentVariables } from '@/common/types';
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { AdminModule } from '../admin/admin.module';
+import { AdminModule } from '@/admin/admin.module';
 import { AuthAdminController } from './auth-admin.controller';
 import { AuthSignService } from './auth-sign.service';
 import { AdminGuard, TeleAuthGuard } from './auth.guard';

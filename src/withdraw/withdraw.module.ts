@@ -16,6 +16,8 @@ import { AdminWithdrawController } from '@/withdraw/controllers/admin.withdraw.c
 import { AdminWalletWithdrawController } from '@/withdraw/controllers/admin.wallet-withdraw.controller';
 import { NotificationModule } from '@/notification/notification.module';
 import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
+import { TelegramModule } from '@/telegram/telegram.module';
+import { WithdrawNotificationService } from '@/withdraw/withdraw-notification.service';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
     SettingModule,
     NotificationModule,
     TelegramAdminModule,
+    TelegramModule,
   ],
   exports: [WithdrawService],
   providers: [
@@ -33,6 +36,7 @@ import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
     WalletWithdrawScheduler,
     AdminWithdrawService,
     AdminWalletWithdrawService,
+    WithdrawNotificationService,
   ],
   controllers: [
     WithdrawController,
