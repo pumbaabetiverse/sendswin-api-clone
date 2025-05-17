@@ -76,7 +76,14 @@ export class BinanceService {
     });
 
     const result = await binanceClient.getPayTradeHistory(50);
-    return result.map((value) => value.data);
+    return result
+      .map((value) => value.data)
+      .mapErr(
+        (err) =>
+          new Error(`Binance account ${account.binanceId}: ${err.message}`, {
+            cause: err.cause,
+          }),
+      );
   }
 
   private async syncAccountBalance(
