@@ -164,7 +164,7 @@ export class BinanceClient {
       if (e instanceof AxiosError) {
         return err(
           new Error(
-            `Binance API error: ${e.response?.status} - ${JSON.stringify(e.response?.data)}`,
+            `Binance API error: Status ${e.response?.status} - Data ${JSON.stringify(e.response?.data)} due to: ${e.message}`,
           ),
         );
       }
