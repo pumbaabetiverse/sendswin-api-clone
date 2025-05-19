@@ -80,7 +80,7 @@ export class BinanceService {
       .map((value) => value.data)
       .mapErr(
         (err) =>
-          new Error(`Binance account ${account.binanceId}: ${err.message}`, {
+          new Error(`Binance account ${account.id}: ${err.message}`, {
             cause: err.cause,
           }),
       );

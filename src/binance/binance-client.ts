@@ -1,11 +1,10 @@
 // binance-client.ts
 
 import { paths } from '@/common/binance-schema.gen';
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as crypto from 'crypto';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { err, ok, Result } from 'neverthrow';
 import { fromSyncResult, toErr } from '@/common/errors';
+import { Client, errors, ProxyAgent, request } from 'undici';
 
 /**
  * Cấu hình client Binance
@@ -43,8 +42,9 @@ export interface PayTradeHistoryResponse {
  * Client chính cho Binance API
  */
 export class BinanceClient {
-  private readonly client: AxiosInstance;
+  private readonly client: Client;
   private readonly config: Required<BinanceConfig>;
+  private readonly defaultHeaders: Record<string, string>;
 
   constructor(config: BinanceConfig) {
     this.config = {
@@ -53,15 +53,9 @@ export class BinanceClient {
     };
 
     const [url, port, username, password] = this.config.proxy.split(':');
-    const proxyUrl = `http://${username}:${password}@${url}:${port}`;
-    const httpsAgent = new HttpsProxyAgent(proxyUrl);
-
-    this.client = axios.create({
-      baseURL: this.config.baseUrl,
-      headers: {
-        'X-MBX-APIKEY': this.config.apiKey,
-      },
-      httpsAgent,
+    const proxyAgent = new ProxyAgent({
+      uri: `http://${url}:${port}`,
+      token: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
     });
   }
 
@@ -154,19 +148,47 @@ export class BinanceClient {
     });
   }
 
-  private async sendRequest<T>(
-    config: AxiosRequestConfig,
-  ): Promise<Result<T, Error>> {
+  private createProxyAgent() {
+    const [url, port, username, password] = this.config.proxy.split(':');
+    return new ProxyAgent({
+      uri: `http://${url}:${port}`,
+      token: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
+    });
+  }
+
+  private async sendRequest<T>(config: {
+    method: string;
+    url: string;
+    params?: Record<string, any>;
+  }): Promise<Result<T, Error>> {
     try {
-      const res = await this.client.request<T>(config);
-      return ok(res.data);
-    } catch (e) {
-      if (e instanceof AxiosError) {
+      const searchParams = new URLSearchParams(config.params).toString();
+      const url = new URL(
+        this.config.baseUrl + config.url + '?' + searchParams,
+      );
+      const { statusCode, body } = await request<T>(url, {
+        method: config.method,
+        headers: {
+          'X-MBX-APIKEY': this.config.apiKey,
+        },
+        dispatcher: this.createProxyAgent(),
+      });
+
+      // Parse the response
+      const data = (await body.json()) as T;
+
+      if (statusCode >= 400) {
         return err(
           new Error(
-            `Binance API error: Status ${e.response?.status} - Data ${JSON.stringify(e.response?.data)} due to: ${e.message}`,
+            `Binance API error: Status ${statusCode} - Data ${JSON.stringify(data)}`,
           ),
         );
+      }
+
+      return ok(data);
+    } catch (e) {
+      if (e instanceof errors.UndiciError) {
+        return err(new Error(`Binance API error: ${e.message}`));
       }
       return toErr(e);
     }
