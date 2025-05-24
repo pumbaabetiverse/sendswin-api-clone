@@ -51,12 +51,6 @@ export class BinanceClient {
       baseUrl: 'https://api.binance.com',
       ...config,
     };
-
-    const [url, port, username, password] = this.config.proxy.split(':');
-    const proxyAgent = new ProxyAgent({
-      uri: `http://${url}:${port}`,
-      token: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
-    });
   }
 
   async getAccountBalanceBySymbol(
@@ -153,6 +147,9 @@ export class BinanceClient {
     return new ProxyAgent({
       uri: `http://${url}:${port}`,
       token: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
+      proxyTls: {
+        timeout: 100,
+      },
     });
   }
 

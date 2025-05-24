@@ -106,20 +106,10 @@ export class BinanceService {
     return fromPromiseResult(this.binanceAccountsRepository.save(account));
   }
 
-  private async getCurrentRotateSyncedAccount(
-    option: DepositOption,
-  ): Promise<Result<BinanceAccount, Error>> {
-    const currentResult = await this.getCurrentRotateAccount(option);
-    if (currentResult.isErr()) {
-      return err(currentResult.error);
-    }
-    return this.syncAccountBalance(currentResult.value, BlockchainToken.USDT);
-  }
-
   private async processRotateAccountAndWithdrawToPool(
     option: DepositOption,
   ): Promise<Result<void, Error>> {
-    const currentResult = await this.getCurrentRotateSyncedAccount(option);
+    const currentResult = await this.getCurrentRotateAccount(option);
     if (currentResult.isErr()) {
       return err(currentResult.error);
     }
@@ -162,6 +152,20 @@ export class BinanceService {
   private async withdrawToPool(
     account: BinanceAccount,
   ): Promise<Result<string, Error>> {
+    const balanceResult = await this.syncAccountBalance(
+      account,
+      BlockchainToken.USDT,
+    );
+    if (balanceResult.isErr()) {
+      return err(balanceResult.error);
+    }
+
+    if (account.usdtBalance < 20) {
+      return err(
+        new Error(`Insufficient balance ${account.usdtBalance} USDT < 20`),
+      );
+    }
+
     const poolAddress = await this.settingService.getSetting(
       SettingKey.POOL_ADDRESS,
       '0xd8cEbb39C86DcCAe4efEef336fcc40923d017702',
