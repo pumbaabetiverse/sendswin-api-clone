@@ -60,22 +60,28 @@ export class DepositsService {
     pagination: PaginationQuery,
   ): Promise<PaginationResponse<DepositWithTransactionHashDto>> {
     const { limit, skip, page } = composePagination(pagination);
-    const items = await this.depositsRepository
-      .createQueryBuilder('deposits')
-      .leftJoinAndSelect(
-        'withdraws',
-        'withdraw',
-        "withdraw.sourceId = CONCAT('game_', deposits.orderId)",
-      )
-      .select([
-        'deposits.*',
-        'withdraw.transactionHash as "withdrawTransactionHash"',
-      ])
-      .where(options)
-      .orderBy('deposits.transactionTime', 'DESC')
-      .skip(skip)
-      .take(limit)
-      .getRawMany();
+    const items = (
+      await this.depositsRepository
+        .createQueryBuilder('deposits')
+        .leftJoinAndSelect(
+          'withdraws',
+          'withdraw',
+          "withdraw.sourceId = CONCAT('game_', deposits.orderId)",
+        )
+        .select([
+          'deposits.*',
+          'withdraw.transactionHash as "withdrawTransactionHash"',
+        ])
+        .where(options)
+        .orderBy('deposits.transactionTime', 'DESC')
+        .skip(skip)
+        .take(limit)
+        .getRawMany()
+    ).map((item: DepositWithTransactionHashDto) => ({
+      ...item,
+      amount: Number(item.amount || 0),
+      payout: Number(item.payout || 0),
+    }));
     const total = await this.depositsRepository.count({
       where: options,
       order: { transactionTime: 'DESC' },
