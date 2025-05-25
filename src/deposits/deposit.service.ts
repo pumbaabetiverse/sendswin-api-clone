@@ -74,8 +74,8 @@ export class DepositsService {
         ])
         .where(options)
         .orderBy('deposits.transactionTime', 'DESC')
-        .skip(skip)
-        .take(limit)
+        .offset(skip)
+        .limit(limit)
         .getRawMany()
     ).map((item: DepositWithTransactionHashDto) => ({
       ...item,
