@@ -1,10 +1,10 @@
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { ApiOkResponsePagination } from '@/common/dto/response.dto';
-import { Deposit } from '@/deposits/deposit.entity';
 import { Controller, Get, Query } from '@nestjs/common';
 import { OverUnderRoundWallet } from './dto/over-under.dto';
 import { OverUnderService } from './over-under.service';
+import { DepositWithTransactionHashDto } from '@/deposits/deposit.dto';
 
 @Controller('game/over-under')
 export class OverUnderController {
@@ -18,7 +18,7 @@ export class OverUnderController {
 
   @Get('history')
   @Authenticated()
-  @ApiOkResponsePagination(Deposit)
+  @ApiOkResponsePagination(DepositWithTransactionHashDto)
   getHistory(
     @AuthUser('userId') userId: number,
     @Query() pagination: PaginationQuery,

@@ -1,4 +1,5 @@
 import { BinanceAccount } from '@/binance/binance.entity';
+import { Deposit } from '@/deposits/deposit.entity';
 
 export interface PayTradeHistoryItem {
   uid: number;
@@ -15,6 +16,10 @@ export interface PayTradeHistoryItem {
   payerInfo?: {
     name: string;
   };
+}
+
+export class DepositWithTransactionHashDto extends Deposit {
+  withdrawTransactionHash?: string;
 }
 
 export class DepositProcessQueueDto {

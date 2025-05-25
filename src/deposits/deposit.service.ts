@@ -10,6 +10,7 @@ import {
 import { composePagination } from '@/common/pagination';
 import {
   DepositProcessQueueDto,
+  DepositWithTransactionHashDto,
   PayTradeHistoryItem,
 } from '@/deposits/deposit.dto';
 import {
@@ -57,9 +58,25 @@ export class DepositsService {
   async historyPagination(
     options: FindOptionsWhere<Deposit> | FindOptionsWhere<Deposit>[],
     pagination: PaginationQuery,
-  ): Promise<PaginationResponse<Deposit>> {
+  ): Promise<PaginationResponse<DepositWithTransactionHashDto>> {
     const { limit, skip, page } = composePagination(pagination);
-    const [items, total] = await this.depositsRepository.findAndCount({
+    const items = await this.depositsRepository
+      .createQueryBuilder('deposits')
+      .leftJoinAndSelect(
+        'withdraws',
+        'withdraw',
+        "withdraw.sourceId = CONCAT('game_', deposits.orderId)",
+      )
+      .select([
+        'deposits.*',
+        'withdraw.transactionHash as "withdrawTransactionHash"',
+      ])
+      .where(options)
+      .orderBy('deposits.transactionTime', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getRawMany();
+    const total = await this.depositsRepository.count({
       where: options,
       order: { transactionTime: 'DESC' },
       skip,
