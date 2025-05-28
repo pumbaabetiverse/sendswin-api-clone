@@ -1,4 +1,5 @@
 import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
 import { ConsoleLogger, RequestMethod, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -39,6 +40,11 @@ async function bootstrap() {
   );
   await app.register(helmet, {
     hidePoweredBy: true,
+  });
+  await app.register(multipart, {
+    limits: {
+      fileSize: 1024 * 1024, // 1MB
+    },
   });
   app.enableCors({
     origin: (origin, callback) => {

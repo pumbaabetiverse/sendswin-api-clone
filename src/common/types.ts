@@ -24,6 +24,13 @@ export interface EnvironmentVariables {
   NEST_ENABLE_OPENAPI_DOC: 'true' | 'false';
 
   NEST_PUBLIC_DOMAIN: string;
+
+  // R2 Object Storage
+  R2_ENDPOINT_URL: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_BUCKET_NAME: string;
+  R2_PUBLIC_URL: string;
 }
 
 export type RawRequest = FastifyRequest['raw'] &

@@ -26,6 +26,7 @@ import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
+import { UploadModule } from '@/upload/upload.module';
 
 @Module({
   imports: [
@@ -151,6 +152,7 @@ import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
     UserRefCircleModule,
     NotificationModule,
     TelegramAdminModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
