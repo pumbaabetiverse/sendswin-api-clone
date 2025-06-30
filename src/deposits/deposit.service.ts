@@ -131,26 +131,26 @@ export class DepositsService {
 
     // Process deposit based on payer information
     if (!item.payerInfo?.name) {
+      this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
       return await this.insertDepositRecord(deposit);
     }
 
     deposit.payerUsername = item.payerInfo.name;
 
     // Find user and validate
-    const userResult = await this.usersService.findByBinanceUsername(
-      item.payerInfo.name,
-    );
-    if (userResult.isErr()) {
-      return err(userResult.error);
-    }
-    const user = userResult.value;
+    const user = (
+      await this.usersService.findByBinanceUsername(item.payerInfo.name)
+    ).unwrapOr(null);
 
     if (!this.isValidUserForDeposit(user, deposit)) {
+      this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
       return await this.insertDepositRecord(deposit);
     }
 
     // Calculate game result and update deposit
     await this.calculateAndUpdateGameResult(deposit);
+
+    this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
 
     // Save deposit and process-related actions
     const saveResult = await this.insertDepositRecord(deposit);
