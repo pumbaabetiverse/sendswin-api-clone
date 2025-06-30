@@ -18,13 +18,9 @@ export class BinanceProxyService {
   ) {}
 
   async performProxyCheck() {
-    this.logger.log('Starting proxy check for active Binance accounts');
-
-    // Get all active Binance accounts
     const accounts = await this.binanceService.getActiveBinanceAccounts();
 
     if (accounts.length === 0) {
-      this.logger.log('No active Binance accounts found');
       return;
     }
 
@@ -33,6 +29,7 @@ export class BinanceProxyService {
     for (const account of accounts) {
       const result = await this.checkProxyWithRetry(account);
       if (result.isErr()) {
+        this.logger.error(`Check proxy ${account.id} failed`);
         failedProxies.push({
           account,
           error: result.error,
@@ -47,8 +44,6 @@ export class BinanceProxyService {
 
     if (failedProxies.length > 0) {
       await this.sendFailedProxiesReport(failedProxies);
-    } else {
-      this.logger.log('All proxies are working correctly');
     }
   }
 
@@ -56,15 +51,8 @@ export class BinanceProxyService {
     account: BinanceAccount,
   ): Promise<Result<boolean, Error>> {
     for (let attempt = 1; attempt <= this.MAX_RETRY_ATTEMPTS; attempt++) {
-      this.logger.debug(
-        `Checking proxy for account ${account.id} (${account.binanceUsername}), attempt ${attempt}`,
-      );
-
       const result = await this.checkProxy(account.proxy);
       if (result.isOk()) {
-        this.logger.debug(
-          `Proxy for account ${account.id} is working correctly`,
-        );
         return result;
       }
 
