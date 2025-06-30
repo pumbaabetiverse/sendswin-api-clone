@@ -5,6 +5,7 @@ import { BinanceAccount, BinanceAccountStatus } from './binance.entity';
 import { ok, Result } from 'neverthrow';
 import { toErr } from '@/common/errors';
 import { BinanceService } from '@/binance/binance.service';
+import { sleep } from '@/common/utils';
 
 @Injectable()
 export class BinanceProxyService {
@@ -56,6 +57,8 @@ export class BinanceProxyService {
         return result;
       }
 
+      await sleep(10000);
+
       if (attempt == this.MAX_RETRY_ATTEMPTS) {
         return result;
       }
@@ -70,7 +73,7 @@ export class BinanceProxyService {
       const { statusCode } = await request(this.HTTPBIN_URL, {
         method: 'GET',
         dispatcher: proxyAgent,
-        headersTimeout: 1000, // 1 seconds timeout
+        headersTimeout: 5000, // 5 seconds timeout
       });
 
       if (statusCode >= 200 && statusCode < 300) {
