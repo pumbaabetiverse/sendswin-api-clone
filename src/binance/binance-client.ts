@@ -169,6 +169,7 @@ export class BinanceClient {
           'X-MBX-APIKEY': this.config.apiKey,
         },
         dispatcher: this.createProxyAgent(),
+        headersTimeout: 2000,
       });
 
       // Parse the response

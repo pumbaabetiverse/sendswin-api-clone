@@ -36,6 +36,14 @@ export class BinanceService {
     });
   }
 
+  async updateAccountStatus(
+    account: BinanceAccount,
+    status: BinanceAccountStatus,
+  ): Promise<Result<BinanceAccount, Error>> {
+    account.status = status;
+    return this.saveAccount(account);
+  }
+
   async processRotateAccountAndWithdrawToPoolWithLock(option: DepositOption) {
     const res = await this.cacheService.executeWithLock(
       `lock:rotate:account:${option}`,
