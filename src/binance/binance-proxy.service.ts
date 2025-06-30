@@ -12,6 +12,7 @@ export class BinanceProxyService {
   private readonly logger = new Logger(BinanceProxyService.name);
   private readonly MAX_RETRY_ATTEMPTS = 5;
   private readonly HTTPBIN_URL = 'https://httpbin.org/ip';
+  private readonly proxyFailureCounter = new Map<number, number>();
 
   constructor(
     private readonly binanceService: BinanceService,
@@ -29,17 +30,29 @@ export class BinanceProxyService {
 
     for (const account of accounts) {
       const result = await this.checkProxyWithRetry(account);
+
       if (result.isErr()) {
         this.logger.error(`Check proxy ${account.id} failed`);
-        failedProxies.push({
-          account,
-          error: result.error,
-        });
 
-        await this.binanceService.updateAccountStatus(
-          account,
-          BinanceAccountStatus.INACTIVE,
-        );
+        const currentFailures = this.proxyFailureCounter.get(account.id) || 0;
+        const newFailureCount = currentFailures + 1;
+        this.proxyFailureCounter.set(account.id, newFailureCount);
+
+        if (newFailureCount >= 3) {
+          failedProxies.push({
+            account,
+            error: result.error,
+          });
+
+          await this.binanceService.updateAccountStatus(
+            account,
+            BinanceAccountStatus.INACTIVE,
+          );
+
+          this.proxyFailureCounter.delete(account.id);
+        }
+      } else {
+        this.proxyFailureCounter.delete(account.id);
       }
     }
 
