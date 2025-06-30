@@ -12,8 +12,10 @@ export class LuckySevenController {
 
   @Get('wallet')
   @Authenticated()
-  getRoundWallet(): Promise<LuckySevenRoundWallet> {
-    return this.luckySevenService.getRoundWallet();
+  getRoundWallet(
+    @AuthUser('userId') userId: number,
+  ): Promise<LuckySevenRoundWallet> {
+    return this.luckySevenService.getRoundWallet(userId);
   }
 
   @Get('history')

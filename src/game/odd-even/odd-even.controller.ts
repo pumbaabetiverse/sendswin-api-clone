@@ -12,8 +12,10 @@ export class OddEvenController {
 
   @Get('wallet')
   @Authenticated()
-  getRoundWallet(): Promise<OddEvenRoundWallet> {
-    return this.overUnderService.getRoundWallet();
+  getRoundWallet(
+    @AuthUser('userId') userId: number,
+  ): Promise<OddEvenRoundWallet> {
+    return this.overUnderService.getRoundWallet(userId);
   }
 
   @Get('history')

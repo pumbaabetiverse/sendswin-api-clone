@@ -5,22 +5,37 @@ import { DepositsService } from '@/deposits/deposit.service';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { In } from 'typeorm';
 import { OddEvenRoundWallet } from '@/game/odd-even/dto/odd-even.dto';
+import { SettingService } from '@/setting/setting.service';
+import { SettingKey } from '@/common/const';
 
 @Injectable()
 export class OddEvenService {
   constructor(
     private readonly binanceService: BinanceService,
     private readonly depositsService: DepositsService,
+    private readonly settingService: SettingService,
   ) {}
 
-  async getRoundWallet(): Promise<OddEvenRoundWallet> {
+  async getRoundWallet(userId: number): Promise<OddEvenRoundWallet> {
     const [oddAccount, evenAccount] = await Promise.all([
       this.binanceService.getCurrentRotateAccount(DepositOption.ODD),
       this.binanceService.getCurrentRotateAccount(DepositOption.EVEN),
     ]);
+    const [maxBet, minBet, oddMultiplier, evenMultiplier] = await Promise.all([
+      this.settingService.getFloatSetting(SettingKey.ODD_EVEN_MAX_AMOUNT, 50),
+      this.settingService.getFloatSetting(SettingKey.ODD_EVEN_MIN_AMOUNT, 0.5),
+      this.settingService.getFloatSetting(SettingKey.ODD_MULTIPLIER, 1.95),
+      this.settingService.getFloatSetting(SettingKey.EVEN_MULTIPLIER, 1.95),
+    ]);
     return {
       oddWallet: oddAccount.unwrapOr(null)?.binanceQrCodeUrl,
       evenWallet: evenAccount.unwrapOr(null)?.binanceQrCodeUrl,
+      evenCode: `${userId}e`,
+      oddCode: `${userId}o`,
+      maxBet,
+      minBet,
+      oddMultiplier,
+      evenMultiplier,
     };
   }
 
