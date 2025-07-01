@@ -46,7 +46,7 @@ export class DepositNotificationService {
 💵 Amount: ${deposit.amount}
 💸 Payout: ${deposit.payout}
 🎯 Result: ${deposit.result}
-🎮 Option: ${deposit.option || 'N/A'}
+🎮 Option: \`${deposit.option || 'N/A'}\`
 👤 User ID: ${deposit.userId || 'N/A'}
 `;
 
