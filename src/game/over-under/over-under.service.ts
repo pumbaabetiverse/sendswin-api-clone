@@ -14,13 +14,12 @@ export class OverUnderService {
   ) {}
 
   async getRoundWallet(): Promise<OverUnderRoundWallet> {
-    const [overAccount, userAccount] = await Promise.all([
-      this.binanceService.getCurrentRotateAccount(DepositOption.OVER),
-      this.binanceService.getCurrentRotateAccount(DepositOption.UNDER),
-    ]);
+    const account = (
+      await this.binanceService.getCurrentRotateAccount()
+    ).unwrapOr(null);
     return {
-      overWallet: overAccount.unwrapOr(null)?.binanceQrCodeUrl,
-      underWallet: userAccount.unwrapOr(null)?.binanceQrCodeUrl,
+      overWallet: account?.binanceQrCodeUrl,
+      underWallet: account?.binanceQrCodeUrl,
     };
   }
 

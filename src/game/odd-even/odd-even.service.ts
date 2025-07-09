@@ -17,10 +17,9 @@ export class OddEvenService {
   ) {}
 
   async getRoundWallet(userId: number): Promise<OddEvenRoundWallet> {
-    const [oddAccount, evenAccount] = await Promise.all([
-      this.binanceService.getCurrentRotateAccount(DepositOption.ODD),
-      this.binanceService.getCurrentRotateAccount(DepositOption.EVEN),
-    ]);
+    const account = (
+      await this.binanceService.getCurrentRotateAccount()
+    ).unwrapOr(null);
     const [maxBet, minBet, oddMultiplier, evenMultiplier] = await Promise.all([
       this.settingService.getFloatSetting(SettingKey.ODD_EVEN_MAX_AMOUNT, 50),
       this.settingService.getFloatSetting(SettingKey.ODD_EVEN_MIN_AMOUNT, 0.5),
@@ -28,8 +27,8 @@ export class OddEvenService {
       this.settingService.getFloatSetting(SettingKey.EVEN_MULTIPLIER, 1.95),
     ]);
     return {
-      oddWallet: oddAccount.unwrapOr(null)?.binanceQrCodeUrl,
-      evenWallet: evenAccount.unwrapOr(null)?.binanceQrCodeUrl,
+      oddWallet: account?.binanceQrCodeUrl,
+      evenWallet: account?.binanceQrCodeUrl,
       evenCode: `${userId}e`,
       oddCode: `${userId}o`,
       maxBet,

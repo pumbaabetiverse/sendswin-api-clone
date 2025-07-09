@@ -129,18 +129,17 @@ export class DepositsService {
     // Create and populate deposit record
     const deposit = this.createDepositRecord(item, account);
 
-    // Process deposit based on payer information
-    if (!item.payerInfo?.name) {
+    const [userId, option] = this.parseTransactionNote(item.note);
+
+    if (!userId || !option) {
       this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
       return await this.insertDepositRecord(deposit);
     }
 
-    deposit.payerUsername = item.payerInfo.name;
+    deposit.option = option;
 
     // Find user and validate
-    const user = (
-      await this.usersService.findByBinanceUsername(item.payerInfo.name)
-    ).unwrapOr(null);
+    const user = (await this.usersService.findById(userId)).unwrapOr(null);
 
     if (!this.isValidUserForDeposit(user, deposit)) {
       this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
@@ -252,10 +251,10 @@ export class DepositsService {
     deposit.currency = item.currency;
     deposit.walletType = item.walletType;
     deposit.totalPaymentFee = item.totalPaymentFee;
-    deposit.option = account.option;
     deposit.payout = 0;
     deposit.result = DepositResult.VOID;
     deposit.toBinanceAccountId = account.id;
+    deposit.payerUsername = item.payerInfo?.name;
 
     return deposit;
   }
@@ -421,5 +420,37 @@ export class DepositsService {
       settingKey,
       gameType === 'ODD_EVEN' ? 1.95 : 300,
     );
+  }
+
+  private parseTransactionNote(
+    note: string,
+  ): [number | null, DepositOption | null] {
+    try {
+      if (note.length == 0) {
+        return [null, null];
+      }
+
+      const rawOption = note[note.length - 1];
+
+      let option: DepositOption;
+      if (rawOption == 'o') {
+        option = DepositOption.ODD;
+      } else if (rawOption == 'e') {
+        option = DepositOption.EVEN;
+      } else if (rawOption == 'g') {
+        option = DepositOption.LUCKY_NUMBER;
+      } else {
+        return [null, null];
+      }
+
+      const rawId = note.substring(0, note.length - 1);
+      const id = parseInt(rawId, 10);
+      if (isNaN(id)) {
+        return [null, null];
+      }
+      return [id, option];
+    } catch {
+      return [null, null];
+    }
   }
 }

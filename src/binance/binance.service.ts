@@ -3,7 +3,6 @@ import {
   PayTradeHistoryResponse,
 } from '@/binance/binance-client';
 import { BinanceAccount, BinanceAccountStatus } from '@/binance/binance.entity';
-import { DepositOption } from '@/deposits/deposit.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -44,24 +43,20 @@ export class BinanceService {
     return this.saveAccount(account);
   }
 
-  async processRotateAccountAndWithdrawToPoolWithLock(option: DepositOption) {
+  async processRotateAccountAndWithdrawToPoolWithLock() {
     const res = await this.cacheService.executeWithLock(
-      `lock:rotate:account:${option}`,
+      `lock:rotate:account`,
       3000,
-      async () => this.processRotateAccountAndWithdrawToPool(option),
+      async () => this.processRotateAccountAndWithdrawToPool(),
     );
     return res.isOk() ? res.value : err(res.error);
   }
 
-  async getCurrentRotateAccount(
-    option: DepositOption,
-  ): Promise<Result<BinanceAccount, Error>> {
-    const currentId = (await this.getCurrentRotateAccountId(option)).unwrapOr(
-      null,
-    );
+  async getCurrentRotateAccount(): Promise<Result<BinanceAccount, Error>> {
+    const currentId = (await this.getCurrentRotateAccountId()).unwrapOr(null);
 
     if (!currentId) {
-      return this.setNextRotateAccount(option);
+      return this.setNextRotateAccount();
     }
 
     const result = await this.getBinanceAccountById(currentId);
@@ -114,10 +109,10 @@ export class BinanceService {
     return fromPromiseResult(this.binanceAccountsRepository.save(account));
   }
 
-  private async processRotateAccountAndWithdrawToPool(
-    option: DepositOption,
-  ): Promise<Result<void, Error>> {
-    const currentResult = await this.getCurrentRotateAccount(option);
+  private async processRotateAccountAndWithdrawToPool(): Promise<
+    Result<void, Error>
+  > {
+    const currentResult = await this.getCurrentRotateAccount();
     if (currentResult.isErr()) {
       return err(currentResult.error);
     }
@@ -128,7 +123,7 @@ export class BinanceService {
       return ok();
     }
 
-    const nextResult = await this.setNextRotateAccount(option);
+    const nextResult = await this.setNextRotateAccount();
 
     if (nextResult.isErr()) {
       return err(nextResult.error);
@@ -195,10 +190,8 @@ export class BinanceService {
     ).map((value) => value.id);
   }
 
-  private async setNextRotateAccount(
-    option: DepositOption,
-  ): Promise<Result<BinanceAccount, Error>> {
-    const accountResult = await this.getLastUsedActiveAccount(option);
+  private async setNextRotateAccount(): Promise<Result<BinanceAccount, Error>> {
+    const accountResult = await this.getLastUsedActiveAccount();
     if (accountResult.isErr()) {
       return err(accountResult.error);
     }
@@ -207,7 +200,7 @@ export class BinanceService {
       return err(new Error('No active binance account'));
     }
 
-    const setResult = await this.setCurrentRotateAccountId(option, account.id);
+    const setResult = await this.setCurrentRotateAccountId(account.id);
     if (setResult.isErr()) {
       return err(setResult.error);
     }
@@ -238,11 +231,9 @@ export class BinanceService {
     );
   }
 
-  private async setCurrentRotateAccountId(option: DepositOption, id: number) {
+  private async setCurrentRotateAccountId(id: number) {
     return fromPromiseResult(
-      this.cacheService
-        .getRedis()
-        .set(`game:account:rotate:${option}`, id.toString()),
+      this.cacheService.getRedis().set(`game:account:rotate`, id.toString()),
     );
   }
 
@@ -252,14 +243,13 @@ export class BinanceService {
     return fromPromiseResult(this.binanceAccountsRepository.save(account));
   }
 
-  private async getLastUsedActiveAccount(
-    option: DepositOption,
-  ): Promise<Result<BinanceAccount | null, Error>> {
+  private async getLastUsedActiveAccount(): Promise<
+    Result<BinanceAccount | null, Error>
+  > {
     return fromPromiseResult(
       this.binanceAccountsRepository.findOne({
         where: {
           status: BinanceAccountStatus.ACTIVE,
-          option,
         },
         order: {
           lastUsedAt: 'ASC',
@@ -278,12 +268,12 @@ export class BinanceService {
     );
   }
 
-  private async getCurrentRotateAccountId(
-    option: DepositOption,
-  ): Promise<Result<number | null, Error>> {
+  private async getCurrentRotateAccountId(): Promise<
+    Result<number | null, Error>
+  > {
     const redisClient = this.cacheService.getRedis();
     const result = await fromPromiseResult(
-      redisClient.get(`game:account:rotate:${option}`),
+      redisClient.get(`game:account:rotate`),
     );
     if (!result.isOk()) {
       return err(result.error);
