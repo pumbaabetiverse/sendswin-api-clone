@@ -24,13 +24,20 @@ export class TelegramService {
     chatId: number,
     message: string,
     extra: ExtraReplyMessage = {},
+    delay: number = 0,
   ): Promise<Result<Job<TelegramMessage>, Error>> {
     return fromPromiseResult(
-      this.telegramMessageQueue.add('send-message', {
-        chatId,
-        message,
-        extra,
-      }),
+      this.telegramMessageQueue.add(
+        'send-message',
+        {
+          chatId,
+          message,
+          extra,
+        },
+        {
+          delay,
+        },
+      ),
     );
   }
 

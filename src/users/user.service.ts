@@ -15,6 +15,10 @@ export class UsersService {
     private readonly cacheService: CacheService,
   ) {}
 
+  async findAll(): Promise<Result<User[], Error>> {
+    return fromPromiseResult(this.usersRepository.find({}));
+  }
+
   async countUserChild(id: number): Promise<Result<number, Error>> {
     return fromPromiseResult(
       this.usersRepository.countBy({

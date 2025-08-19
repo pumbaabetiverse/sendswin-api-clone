@@ -6,11 +6,12 @@ import { AdminUserController } from './controllers/admin.user.controller';
 import { AdminUserService } from './services/admin.user.service';
 import { UserController } from './controllers/user.controller';
 import { CacheModule } from '@/cache/cache.module';
+import { TelegramModule } from '@/telegram/telegram.module';
 
 @Global()
 @Module({
   controllers: [AdminUserController, UserController],
-  imports: [TypeOrmModule.forFeature([User]), CacheModule],
+  imports: [TypeOrmModule.forFeature([User]), CacheModule, TelegramModule],
   providers: [UsersService, AdminUserService],
   exports: [UsersService],
 })
