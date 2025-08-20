@@ -2,15 +2,15 @@ import { BinanceService } from '@/binance/binance.service';
 import { DepositOption } from '@/deposits/deposit.entity';
 import { Injectable } from '@nestjs/common';
 import { OverUnderRoundWallet } from './dto/over-under.dto';
-import { DepositsService } from '@/deposits/deposit.service';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { In } from 'typeorm';
+import { DepositHistoryService } from '@/deposit-history/deposit-history.service';
 
 @Injectable()
 export class OverUnderService {
   constructor(
     private readonly binanceService: BinanceService,
-    private readonly depositsService: DepositsService,
+    private readonly depositHistoryService: DepositHistoryService,
   ) {}
 
   async getRoundWallet(): Promise<OverUnderRoundWallet> {
@@ -24,7 +24,7 @@ export class OverUnderService {
   }
 
   async getHistory(userId: number, pagination: PaginationQuery) {
-    return this.depositsService.historyPagination(
+    return this.depositHistoryService.historyPagination(
       { userId, option: In([DepositOption.OVER, DepositOption.UNDER]) },
       pagination,
     );

@@ -1,16 +1,8 @@
 // src/deposits/deposits.service.ts
 
 import { BinanceService } from '@/binance/binance.service';
-import { SettingKey } from '@/common/const';
-import {
-  buildPaginateResponse,
-  PaginationQuery,
-  PaginationResponse,
-} from '@/common/dto/pagination.dto';
-import { composePagination } from '@/common/pagination';
 import {
   DepositProcessQueueDto,
-  DepositWithTransactionHashDto,
   PayTradeHistoryItem,
 } from '@/deposits/deposit.dto';
 import {
@@ -18,14 +10,13 @@ import {
   DepositOption,
   DepositResult,
 } from '@/deposits/deposit.entity';
-import { SettingService } from '@/setting/setting.service';
 import { UsersService } from '@/users/user.service';
 import { WithdrawRequestQueueDto } from '@/withdraw/withdraw.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventName } from '@/common/event-name';
 import { RefContributeEvent } from '@/referral/user-ref-circle.dto';
@@ -39,6 +30,7 @@ import {
 } from '@/withdraw/withdraw.domain';
 import { fromPromiseResult } from '@/common/errors';
 import { DepositNotificationService } from '@/deposits/deposit-notification.service';
+import { GameService } from '@/game/game.service';
 
 @Injectable()
 export class DepositsService {
@@ -47,49 +39,13 @@ export class DepositsService {
     private readonly depositsRepository: Repository<Deposit>,
     private readonly usersService: UsersService,
     private readonly binanceService: BinanceService,
-    private readonly settingService: SettingService,
+    private readonly gameService: GameService,
     @InjectQueue('withdraw')
     private readonly withdrawQueue: Queue<WithdrawRequestQueueDto>,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: CacheService,
     private readonly depositNotificationService: DepositNotificationService,
   ) {}
-
-  async historyPagination(
-    options: FindOptionsWhere<Deposit> | FindOptionsWhere<Deposit>[],
-    pagination: PaginationQuery,
-  ): Promise<PaginationResponse<DepositWithTransactionHashDto>> {
-    const { limit, skip, page } = composePagination(pagination);
-    const items = (
-      await this.depositsRepository
-        .createQueryBuilder('deposits')
-        .leftJoinAndSelect(
-          'withdraws',
-          'withdraw',
-          "withdraw.sourceId = CONCAT('game_', deposits.orderId)",
-        )
-        .select([
-          'deposits.*',
-          'withdraw.transactionHash as "withdrawTransactionHash"',
-        ])
-        .where(options)
-        .orderBy('deposits.transactionTime', 'DESC')
-        .offset(skip)
-        .limit(limit)
-        .getRawMany()
-    ).map((item: DepositWithTransactionHashDto) => ({
-      ...item,
-      amount: Number(item.amount || 0),
-      payout: Number(item.payout || 0),
-    }));
-    const total = await this.depositsRepository.count({
-      where: options,
-      order: { transactionTime: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return buildPaginateResponse(items, total, page, limit);
-  }
 
   async processSingleAccountTradeHistory(
     account: BinanceAccount,
@@ -173,36 +129,6 @@ export class DepositsService {
     return ok();
   }
 
-  private determineOddEvenResult(
-    option: DepositOption,
-    transactionId: string,
-  ): DepositResult {
-    if (!transactionId) {
-      return DepositResult.VOID;
-    }
-    // Calculate sums of last 3 digits
-    const sumDigit = this.calculateSumOfLastDigits(transactionId, 3);
-
-    // Check if the sum digit is a number
-    if (isNaN(sumDigit)) {
-      return DepositResult.VOID;
-    }
-
-    const isOdd = sumDigit % 2 === 1;
-    const userSelectedOdd = option === DepositOption.ODD;
-
-    return (userSelectedOdd && isOdd) || (!userSelectedOdd && !isOdd)
-      ? DepositResult.WIN
-      : DepositResult.LOSE;
-  }
-
-  private determineLuckyNumberResult(transactionId: string): DepositResult {
-    if (!transactionId) {
-      return DepositResult.VOID;
-    }
-    return transactionId.endsWith('7') ? DepositResult.WIN : DepositResult.LOSE;
-  }
-
   private async processDepositItemWithLock(
     item: PayTradeHistoryItem,
     account: BinanceAccount,
@@ -284,10 +210,10 @@ export class DepositsService {
   }
 
   private async calculateAndUpdateGameResult(deposit: Deposit): Promise<void> {
-    const { result, payout } = await this.calcGameResultAndPayout(
-      deposit.option!,
+    const { result, payout } = await this.gameService.calcGameResultAndPayout(
       deposit.amount,
       deposit.orderId,
+      deposit.option!,
     );
 
     deposit.result = result;
@@ -325,101 +251,6 @@ export class DepositsService {
         },
       );
     }
-  }
-
-  private calculateSumOfLastDigits(str: string, count: number): number {
-    let sum = 0;
-    for (let i = 0; i < count; i++) {
-      const digit = parseInt(str.charAt(str.length - 1 - i), 10);
-      if (isNaN(digit)) return NaN;
-      sum += digit;
-    }
-    return sum;
-  }
-
-  private async calcGameResultAndPayout(
-    option: DepositOption,
-    amount: number,
-    orderId: string,
-  ): Promise<{ result: DepositResult; payout: number }> {
-    // Default values
-    const defaultResult = {
-      result: DepositResult.VOID,
-      payout: 0,
-    };
-
-    // Determine game type
-    const gameType = this.determineGameType(option);
-    if (!gameType) return defaultResult;
-
-    // Check amount limits
-    const { minAmount, maxAmount } = await this.getAmountLimits(gameType);
-    if (amount < minAmount || amount > maxAmount) return defaultResult;
-
-    // Determine result
-    const result = this.determineGameResult(gameType, option, orderId);
-
-    // Calculate payout if win
-    let payout = 0;
-    if (result === DepositResult.WIN) {
-      const multiplier = await this.getMultiplier(gameType, option);
-      payout = amount * multiplier;
-    }
-
-    return { result, payout };
-  }
-
-  private determineGameType(
-    option: DepositOption,
-  ): 'ODD_EVEN' | 'LUCKY_NUMBER' | null {
-    if (option === DepositOption.ODD || option === DepositOption.EVEN) {
-      return 'ODD_EVEN';
-    } else if (option === DepositOption.LUCKY_NUMBER) {
-      return 'LUCKY_NUMBER';
-    }
-    return null;
-  }
-
-  private async getAmountLimits(
-    gameType: 'ODD_EVEN' | 'LUCKY_NUMBER',
-  ): Promise<{ minAmount: number; maxAmount: number }> {
-    const minAmount = await this.settingService.getFloatSetting(
-      SettingKey[`${gameType}_MIN_AMOUNT`],
-      gameType === 'ODD_EVEN' ? 0.5 : 0.5,
-    );
-
-    const maxAmount = await this.settingService.getFloatSetting(
-      SettingKey[`${gameType}_MAX_AMOUNT`],
-      gameType === 'ODD_EVEN' ? 50 : 10,
-    );
-
-    return { minAmount, maxAmount };
-  }
-
-  private determineGameResult(
-    gameType: string,
-    option: DepositOption,
-    orderId: string,
-  ): DepositResult {
-    return gameType === 'ODD_EVEN'
-      ? this.determineOddEvenResult(option, orderId)
-      : this.determineLuckyNumberResult(orderId);
-  }
-
-  private async getMultiplier(
-    gameType: 'ODD_EVEN' | 'LUCKY_NUMBER',
-    option: DepositOption,
-  ): Promise<number> {
-    const settingKey =
-      gameType === 'ODD_EVEN'
-        ? SettingKey[
-            `${option == DepositOption.ODD ? 'ODD' : 'EVEN'}_MULTIPLIER`
-          ]
-        : SettingKey[`${gameType}_MULTIPLIER`];
-    return await this.settingService.getFloatSetting(
-      settingKey,
-      gameType === 'ODD_EVEN' ? 1.95 : 300,
-    );
   }
 
   private parseTransactionNote(

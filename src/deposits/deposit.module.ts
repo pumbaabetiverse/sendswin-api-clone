@@ -15,6 +15,7 @@ import { NotificationModule } from '@/notification/notification.module';
 import { DepositNotificationService } from '@/deposits/deposit-notification.service';
 import { TelegramModule } from '@/telegram/telegram.module';
 import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
+import { GameModule } from '@/game/game.module';
 
 @Module({
   controllers: [AdminDepositController],
@@ -34,6 +35,7 @@ import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
     TelegramAdminModule,
     CacheModule,
     NotificationModule,
+    GameModule,
   ],
   providers: [
     DepositsService,
