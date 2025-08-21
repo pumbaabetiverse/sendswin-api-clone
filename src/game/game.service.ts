@@ -30,12 +30,11 @@ export class GameService {
       option == DepositOption.LOTTERY_2 ||
       option == DepositOption.LOTTERY_3
     ) {
-      // For now, return VOID result and 0 payout for lottery games
-      // This should be replaced with actual lottery game logic in the future
-      return {
-        result: DepositResult.VOID,
-        payout: 0,
-      };
+      return this.lotteryService.calcGameResultAndPayout(
+        amount,
+        orderId,
+        option,
+      );
     }
     return {
       result: DepositResult.VOID,

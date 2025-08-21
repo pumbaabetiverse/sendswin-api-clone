@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { In, Repository } from 'typeorm';
-import { DepositOption } from '@/deposits/deposit.entity';
+import { DepositOption, DepositResult } from '@/deposits/deposit.entity';
 import { BinanceService } from '@/binance/binance.service';
 import { DepositHistoryService } from '@/deposit-history/deposit-history.service';
 import { SettingService } from '@/setting/setting.service';
@@ -80,5 +80,154 @@ export class LotteryService {
       },
       pagination,
     );
+  }
+
+  async calcGameResultAndPayout(
+    amount: number,
+    orderId: string,
+    option: DepositOption,
+  ): Promise<{ result: DepositResult; payout: number }> {
+    // Default values
+    const defaultResult = {
+      result: DepositResult.VOID,
+      payout: 0,
+    };
+
+    if (!(await this.isGameEnable(option))) {
+      return defaultResult;
+    }
+
+    const minAmount = await this.getMinAmount(option);
+    const maxAmount = await this.getMaxAmount(option);
+
+    if (amount < minAmount || amount > maxAmount) return defaultResult;
+
+    const checkedPart = this.getCheckedPart(orderId, option);
+
+    const isHitJackpot = await this.isHitJackpot(checkedPart);
+    let multiplier = 0;
+    let result = DepositResult.LOSE;
+
+    if (isHitJackpot) {
+      multiplier = await this.getJackpotMultiplier(option);
+      result = DepositResult.WIN;
+    } else {
+      const sidePrizes = await this.lotterySidePrizeRepository.find({
+        where: {
+          option,
+        },
+        order: {
+          multiplier: 'DESC',
+        },
+      });
+      for (const sidePrize of sidePrizes) {
+        if (sidePrize.pattern.endsWith(checkedPart)) {
+          multiplier = sidePrize.multiplier;
+          result = DepositResult.WIN;
+          break;
+        }
+      }
+    }
+
+    let payout = 0;
+    if (result == DepositResult.WIN) {
+      payout = amount * multiplier;
+    }
+
+    return {
+      result,
+      payout,
+    };
+  }
+
+  private async isGameEnable(option: DepositOption): Promise<boolean> {
+    let settingKey = SettingKey.ENABLE_LOTTERY_3;
+    if (option == DepositOption.LOTTERY_1) {
+      settingKey = SettingKey.ENABLE_LOTTERY_1;
+    } else if (option == DepositOption.LOTTERY_2) {
+      settingKey = SettingKey.ENABLE_LOTTERY_2;
+    }
+    return (await this.settingService.getSetting(settingKey, '0')) == '1';
+  }
+
+  private async getJackpotMultiplier(option: DepositOption) {
+    if (option == DepositOption.LOTTERY_1) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_1_JACKPOT_MULTIPLIER,
+        30,
+      );
+    } else if (option == DepositOption.LOTTERY_2) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_2_JACKPOT_MULTIPLIER,
+        30,
+      );
+    } else if (option == DepositOption.LOTTERY_3) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_3_JACKPOT_MULTIPLIER,
+        30,
+      );
+    }
+    return 0;
+  }
+
+  private async getMinAmount(option: DepositOption): Promise<number> {
+    if (option == DepositOption.LOTTERY_1) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_1_MIN_AMOUNT,
+        0.5,
+      );
+    } else if (option == DepositOption.LOTTERY_2) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_2_MIN_AMOUNT,
+        0.5,
+      );
+    } else if (option == DepositOption.LOTTERY_3) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_3_MIN_AMOUNT,
+        0.5,
+      );
+    }
+    return 0.5;
+  }
+
+  private async getMaxAmount(option: DepositOption): Promise<number> {
+    if (option == DepositOption.LOTTERY_1) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_1_MAX_AMOUNT,
+        1000,
+      );
+    } else if (option == DepositOption.LOTTERY_2) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_2_MAX_AMOUNT,
+        100,
+      );
+    } else if (option == DepositOption.LOTTERY_3) {
+      return this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_3_MAX_AMOUNT,
+        100,
+      );
+    }
+    return 0.5;
+  }
+
+  private async isHitJackpot(checkedPart: string): Promise<boolean> {
+    const currentDateUTC = dayjs().utc().format('YYYY-MM-DD');
+    const todayNumber = await this.lotteryJackpotNumberRepository.findOneBy({
+      day: currentDateUTC,
+    });
+    if (!todayNumber) {
+      return false;
+    }
+    return todayNumber.number.endsWith(checkedPart);
+  }
+
+  private getCheckedPart(orderId: string, option: DepositOption): string {
+    if (option == DepositOption.LOTTERY_1) {
+      return orderId.substring(orderId.length, 1);
+    } else if (option == DepositOption.LOTTERY_2) {
+      return orderId.substring(orderId.length, 2);
+    } else {
+      return orderId.substring(orderId.length, 3);
+    }
   }
 }
