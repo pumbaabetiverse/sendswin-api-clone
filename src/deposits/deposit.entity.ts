@@ -20,6 +20,9 @@ export enum DepositOption {
   ODD = 'odd',
   EVEN = 'even',
   LUCKY_NUMBER = 'lucky_number',
+  LOTTERY_1 = 'lottery_1',
+  LOTTERY_2 = 'lottery_2',
+  LOTTERY_3 = 'lottery_3',
 }
 
 @Entity('deposits')

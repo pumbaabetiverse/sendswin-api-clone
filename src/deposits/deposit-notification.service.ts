@@ -83,6 +83,12 @@ export class DepositNotificationService {
       optionDisplay = '🔴 ODD';
     } else if (option == DepositOption.LUCKY_NUMBER) {
       optionDisplay = '🍀 GOLDEN 7';
+    } else if (option == DepositOption.LOTTERY_1) {
+      optionDisplay = '🍀 LOTTERY 1';
+    } else if (option == DepositOption.LOTTERY_2) {
+      optionDisplay = '🍀 LOTTERY 2';
+    } else if (option == DepositOption.LOTTERY_3) {
+      optionDisplay = '🍀 LOTTERY 3';
     }
 
     // Format the result for better readability

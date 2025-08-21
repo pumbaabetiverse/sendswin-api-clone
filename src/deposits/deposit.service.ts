@@ -261,20 +261,38 @@ export class DepositsService {
         return [null, null];
       }
 
-      const rawOption = note[note.length - 1];
+      const lowerNote = note.toLowerCase();
 
       let option: DepositOption;
-      if (rawOption == 'o') {
-        option = DepositOption.ODD;
-      } else if (rawOption == 'e') {
-        option = DepositOption.EVEN;
-      } else if (rawOption == 'g') {
-        option = DepositOption.LUCKY_NUMBER;
+      let rawId: string;
+
+      // Check for lottery game formats (l1, l2, l3)
+      if (lowerNote.endsWith('l1')) {
+        option = DepositOption.LOTTERY_1;
+        rawId = lowerNote.substring(0, lowerNote.length - 2);
+      } else if (lowerNote.endsWith('l2')) {
+        option = DepositOption.LOTTERY_2;
+        rawId = lowerNote.substring(0, lowerNote.length - 2);
+      } else if (lowerNote.endsWith('l3')) {
+        option = DepositOption.LOTTERY_3;
+        rawId = lowerNote.substring(0, lowerNote.length - 2);
       } else {
-        return [null, null];
+        // Handle original formats (o, e, g)
+        const rawOption = lowerNote[lowerNote.length - 1];
+
+        if (rawOption == 'o') {
+          option = DepositOption.ODD;
+        } else if (rawOption == 'e') {
+          option = DepositOption.EVEN;
+        } else if (rawOption == 'g') {
+          option = DepositOption.LUCKY_NUMBER;
+        } else {
+          return [null, null];
+        }
+
+        rawId = lowerNote.substring(0, lowerNote.length - 1);
       }
 
-      const rawId = note.substring(0, note.length - 1);
       const id = parseInt(rawId, 10);
       if (isNaN(id)) {
         return [null, null];

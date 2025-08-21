@@ -67,8 +67,22 @@ export class UserRefCircleService {
         SettingKey.LUCKY_NUMBER_REF_MULTIPLIER,
         0.3,
       );
+    } else if (depositOption == DepositOption.LOTTERY_1) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_1_REF_MULTIPLIER,
+        0.2,
+      );
+    } else if (depositOption == DepositOption.LOTTERY_2) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_2_REF_MULTIPLIER,
+        0.2,
+      );
+    } else if (depositOption == DepositOption.LOTTERY_3) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.LOTTERY_3_REF_MULTIPLIER,
+        0.2,
+      );
     }
-
     return amount * refMultiplier;
   }
 
