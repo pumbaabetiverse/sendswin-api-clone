@@ -223,11 +223,11 @@ export class LotteryService {
 
   private getCheckedPart(orderId: string, option: DepositOption): string {
     if (option == DepositOption.LOTTERY_1) {
-      return orderId.substring(orderId.length, 1);
+      return orderId.substring(orderId.length - 1);
     } else if (option == DepositOption.LOTTERY_2) {
-      return orderId.substring(orderId.length, 2);
+      return orderId.substring(orderId.length - 2);
     } else {
-      return orderId.substring(orderId.length, 3);
+      return orderId.substring(orderId.length - 3);
     }
   }
 }
