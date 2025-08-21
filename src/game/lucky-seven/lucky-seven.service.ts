@@ -17,7 +17,9 @@ export class LuckySevenService {
   ) {}
 
   async getRoundWallet(userId: number): Promise<LuckySevenRoundWallet> {
-    const result = await this.binanceService.getCurrentRotateAccount();
+    const account = (
+      await this.binanceService.getCurrentRotateAccount()
+    ).unwrapOr(null);
     const [maxBet, minBet, multiplier] = await Promise.all([
       this.settingService.getFloatSetting(
         SettingKey.LUCKY_NUMBER_MAX_AMOUNT,
@@ -33,7 +35,9 @@ export class LuckySevenService {
       ),
     ]);
     return {
-      binanceQrCodeUrl: result.unwrapOr(null)?.binanceQrCodeUrl,
+      binanceQrCodeUrl: account?.binanceQrCodeUrl,
+      binanceId: account?.binanceId,
+      binanceUsername: account?.binanceUsername,
       maxBet,
       multiplier,
       minBet,

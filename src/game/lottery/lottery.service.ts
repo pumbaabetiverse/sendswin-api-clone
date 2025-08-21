@@ -27,7 +27,9 @@ export class LotteryService {
   ) {}
 
   async getRoundWallet(userId: number): Promise<LotteryRoundWallet> {
-    const result = await this.binanceService.getCurrentRotateAccount();
+    const account = (
+      await this.binanceService.getCurrentRotateAccount()
+    ).unwrapOr(null);
     const options: ('LOTTERY_1' | 'LOTTERY_2' | 'LOTTERY_3')[] = [
       'LOTTERY_1',
       'LOTTERY_2',
@@ -63,7 +65,9 @@ export class LotteryService {
       settings,
       prizes,
       jackpotNumber,
-      wallet: result.unwrapOr(null)?.binanceQrCodeUrl,
+      wallet: account?.binanceQrCodeUrl,
+      binanceId: account?.binanceId,
+      binanceUsername: account?.binanceUsername,
     };
   }
 

@@ -29,6 +29,8 @@ export class OddEvenService {
     return {
       oddWallet: account?.binanceQrCodeUrl,
       evenWallet: account?.binanceQrCodeUrl,
+      binanceId: account?.binanceId,
+      binanceUsername: account?.binanceUsername,
       evenCode: `${userId}e`,
       oddCode: `${userId}o`,
       maxBet,

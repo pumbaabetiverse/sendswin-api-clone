@@ -5,6 +5,8 @@ export class OddEvenRoundWallet {
   maxBet?: number;
   oddMultiplier?: number;
   evenMultiplier?: number;
+  binanceId?: string;
+  binanceUsername?: string;
   oddCode?: string;
   evenCode?: string;
 }

@@ -4,4 +4,6 @@ export class LuckySevenRoundWallet {
   maxBet?: number;
   code?: string;
   multiplier?: number;
+  binanceId?: string;
+  binanceUsername?: string;
 }

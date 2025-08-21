@@ -15,4 +15,6 @@ export class LotteryRoundWallet {
   prizes: LotterySidePrize[];
   jackpotNumber?: LotteryJackpotNumber;
   wallet?: string;
+  binanceId?: string;
+  binanceUsername?: string;
 }
