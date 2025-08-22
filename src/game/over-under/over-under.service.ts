@@ -104,8 +104,8 @@ export class OverUnderService {
     }
     const lastDigit = transactionId[transactionId.length - 1];
 
-    const isOver = lastDigit in ['6', '7', '8', '9'];
-    const isUnder = lastDigit in ['1', '2', '3', '4'];
+    const isOver = ['6', '7', '8', '9'].includes(lastDigit);
+    const isUnder = ['1', '2', '3', '4'].includes(lastDigit);
     const userSelectedOver = option === DepositOption.OVER;
 
     return (userSelectedOver && isOver) || (!userSelectedOver && isUnder)
