@@ -89,6 +89,10 @@ export class DepositNotificationService {
       optionDisplay = '🍀 LOTTERY 2';
     } else if (option == DepositOption.LOTTERY_3) {
       optionDisplay = '🍀 LOTTERY 3';
+    } else if (option == DepositOption.OVER) {
+      optionDisplay = '⬆️ BIG';
+    } else if (option == DepositOption.UNDER) {
+      optionDisplay = '⬇️ SMALL';
     }
 
     // Format the result for better readability
