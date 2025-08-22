@@ -82,6 +82,14 @@ export class UserRefCircleService {
         SettingKey.LOTTERY_3_REF_MULTIPLIER,
         0.2,
       );
+    } else if (
+      depositOption == DepositOption.OVER ||
+      depositOption == DepositOption.UNDER
+    ) {
+      refMultiplier = await this.settingService.getFloatSetting(
+        SettingKey.OVER_UNDER_REF_MULTIPLIER,
+        0.01,
+      );
     }
     return amount * refMultiplier;
   }

@@ -115,7 +115,9 @@ export class DepositsService {
     }
 
     // Process referral commission
-    this.addReferralContribution(deposit, user!);
+    if (deposit.result != DepositResult.VOID) {
+      this.addReferralContribution(deposit, user!);
+    }
 
     // Send a new game message on Telegram notification
     await this.depositNotificationService.sendNewGameNotification(
@@ -286,6 +288,10 @@ export class DepositsService {
           option = DepositOption.EVEN;
         } else if (rawOption == 'g') {
           option = DepositOption.LUCKY_NUMBER;
+        } else if (rawOption == 'b') {
+          option = DepositOption.OVER;
+        } else if (rawOption == 's') {
+          option = DepositOption.UNDER;
         } else {
           return [null, null];
         }

@@ -12,8 +12,10 @@ export class OverUnderController {
 
   @Get('wallet')
   @Authenticated()
-  getRoundWallet(): Promise<OverUnderRoundWallet> {
-    return this.overUnderService.getRoundWallet();
+  getRoundWallet(
+    @AuthUser('userId') userId: number,
+  ): Promise<OverUnderRoundWallet> {
+    return this.overUnderService.getRoundWallet(userId);
   }
 
   @Get('history')
