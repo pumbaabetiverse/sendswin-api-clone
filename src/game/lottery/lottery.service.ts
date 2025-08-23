@@ -90,12 +90,15 @@ export class LotteryService {
     amount: number,
     orderId: string,
     option: DepositOption,
-  ): Promise<{ result: DepositResult; payout: number }> {
+  ): Promise<{ result: DepositResult; payout: number; meta: string }> {
     // Default values
     const defaultResult = {
       result: DepositResult.VOID,
       payout: 0,
+      meta: '',
     };
+
+    let metaData: Record<string, any> = await this.getTodayInfo();
 
     if (!(await this.isGameEnable(option))) {
       return defaultResult;
@@ -109,6 +112,7 @@ export class LotteryService {
     const checkedPart = this.getCheckedPart(orderId, option);
 
     const isHitJackpot = await this.isHitJackpot(checkedPart);
+    metaData = { ...metaData, isJackpot: isHitJackpot, sizePriceId: null };
     let multiplier = 0;
     let result = DepositResult.LOSE;
 
@@ -128,6 +132,7 @@ export class LotteryService {
         if (sidePrize.pattern.endsWith(checkedPart)) {
           multiplier = sidePrize.multiplier;
           result = DepositResult.WIN;
+          metaData['sizePriceId'] = sidePrize.id;
           break;
         }
       }
@@ -141,6 +146,7 @@ export class LotteryService {
     return {
       result,
       payout,
+      meta: JSON.stringify(metaData),
     };
   }
 
@@ -212,6 +218,26 @@ export class LotteryService {
       );
     }
     return 0.5;
+  }
+
+  private async getTodayInfo(): Promise<{
+    date: string;
+    number: string;
+  }> {
+    const currentDateUTC = dayjs().utc().format('YYYY-MM-DD');
+    const todayNumber = await this.lotteryJackpotNumberRepository.findOneBy({
+      day: currentDateUTC,
+    });
+    if (!todayNumber) {
+      return {
+        date: currentDateUTC,
+        number: '',
+      };
+    }
+    return {
+      date: currentDateUTC,
+      number: todayNumber.number,
+    };
   }
 
   private async isHitJackpot(checkedPart: string): Promise<boolean> {

@@ -107,6 +107,11 @@ export class Deposit {
   })
   toBinanceAccountId?: number;
 
+  @Column({
+    default: '',
+  })
+  meta: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }
