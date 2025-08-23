@@ -212,14 +212,16 @@ export class DepositsService {
   }
 
   private async calculateAndUpdateGameResult(deposit: Deposit): Promise<void> {
-    const { result, payout } = await this.gameService.calcGameResultAndPayout(
-      deposit.amount,
-      deposit.orderId,
-      deposit.option!,
-    );
+    const { result, payout, meta } =
+      await this.gameService.calcGameResultAndPayout(
+        deposit.amount,
+        deposit.orderId,
+        deposit.option!,
+      );
 
     deposit.result = result;
     deposit.payout = payout;
+    deposit.meta = meta;
   }
 
   private addReferralContribution(deposit: Deposit, user: User): void {

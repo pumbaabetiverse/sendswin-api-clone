@@ -108,9 +108,11 @@ export class Deposit {
   toBinanceAccountId?: number;
 
   @Column({
-    default: '',
+    type: 'jsonb',
+    nullable: true,
+    default: null,
   })
-  meta: string;
+  meta?: object;
 
   @CreateDateColumn()
   createdAt: Date;

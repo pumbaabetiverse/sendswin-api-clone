@@ -18,24 +18,15 @@ export class GameService {
     amount: number,
     orderId: string,
     option: DepositOption,
-  ): Promise<{ result: DepositResult; payout: number; meta: string }> {
+  ): Promise<{ result: DepositResult; payout: number; meta?: object }> {
     if (option == DepositOption.LUCKY_NUMBER) {
-      return {
-        ...(await this.luckySevenService.calcGameResultAndPayout(
-          amount,
-          orderId,
-        )),
-        meta: '',
-      };
+      return this.luckySevenService.calcGameResultAndPayout(amount, orderId);
     } else if (option == DepositOption.ODD || option == DepositOption.EVEN) {
-      return {
-        ...(await this.oddEvenService.calcGameResultAndPayout(
-          amount,
-          orderId,
-          option,
-        )),
-        meta: '',
-      };
+      return this.oddEvenService.calcGameResultAndPayout(
+        amount,
+        orderId,
+        option,
+      );
     } else if (
       option == DepositOption.LOTTERY_1 ||
       option == DepositOption.LOTTERY_2 ||
@@ -47,19 +38,15 @@ export class GameService {
         option,
       );
     } else if (option == DepositOption.OVER || option == DepositOption.UNDER) {
-      return {
-        ...(await this.overUnderService.calcGameResultAndPayout(
-          amount,
-          orderId,
-          option,
-        )),
-        meta: '',
-      };
+      return await this.overUnderService.calcGameResultAndPayout(
+        amount,
+        orderId,
+        option,
+      );
     }
     return {
       result: DepositResult.VOID,
       payout: 0,
-      meta: '',
     };
   }
 }
