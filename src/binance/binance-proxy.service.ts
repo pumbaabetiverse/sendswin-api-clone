@@ -105,7 +105,7 @@ export class BinanceProxyService {
       uri: `http://${url}:${port}`,
       token: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
       proxyTls: {
-        timeout: 1000,
+        timeout: 5000,
       },
     });
   }
