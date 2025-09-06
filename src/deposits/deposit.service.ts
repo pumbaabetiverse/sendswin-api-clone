@@ -146,14 +146,6 @@ export class DepositsService {
     return result.value;
   }
 
-  private isDepositHistory(item: PayTradeHistoryItem): boolean {
-    return (
-      item.orderType === 'C2C' &&
-      item.currency === 'USDT' &&
-      parseFloat(item.amount) >= 0
-    );
-  }
-
   private async isDepositAlreadyProcessed(orderId: string): Promise<boolean> {
     const existingDeposit = await this.depositsRepository.findOneBy({
       orderId,
@@ -309,5 +301,41 @@ export class DepositsService {
     } catch {
       return [null, null];
     }
+  }
+
+  async getRecentBinanceAccountUsedByUserId(
+    userId: number,
+  ): Promise<BinanceAccount[]> {
+    // Find recent deposits by this user that have a mapped Binance account id
+    const qb = this.depositsRepository
+      .createQueryBuilder('d')
+      .select([
+        'd.toBinanceAccountId AS "toBinanceAccountId"',
+        'MAX(d.createdAt) AS "lastUsedAt"',
+      ])
+      .where('d.userId = :userId', { userId })
+      .andWhere('d.toBinanceAccountId IS NOT NULL')
+      .groupBy('d.toBinanceAccountId')
+      .orderBy('MAX(d.createdAt)', 'DESC')
+      .limit(2);
+
+    type Row = { toBinanceAccountId: number; lastUsedAt: Date };
+    const rows: Row[] = await qb.getRawMany();
+    if (!rows.length) {
+      return [];
+    }
+
+    // Preserve ordering by lastUsedAt while loading account entities
+    const idsInOrder = rows.map((r) => r.toBinanceAccountId);
+
+    // We use binanceService to fetch accounts; batch via repository would lose order, so fetch individually to keep order small N.
+    const accounts: BinanceAccount[] = [];
+    for (const id of idsInOrder) {
+      const result = await this.binanceService.getBinanceAccountById(id);
+      if (result.isOk() && result.value) {
+        accounts.push(result.value);
+      }
+    }
+    return accounts;
   }
 }
