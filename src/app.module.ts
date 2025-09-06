@@ -54,6 +54,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
       inject: [ConfigService],
       useFactory: (configService: ConfigService<EnvironmentVariables>) => {
         const redisUrl = configService.get<string>('REDIS_URL');
+        const isTls = configService.get<string>('REDIS_TLS');
         if (!redisUrl) {
           throw new Error('REDIS_URL is not defined');
         }
@@ -61,7 +62,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
           type: 'single',
           url: redisUrl,
           options: {
-            tls: redisUrl.includes('localhost') ? undefined : {},
+            tls: isTls == '0' ? undefined : {},
           },
         };
       },

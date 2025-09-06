@@ -14,6 +14,7 @@ export interface EnvironmentVariables {
   DB_LOGGING: 'true' | 'false';
 
   REDIS_URL: string;
+  REDIS_TLS: string;
   JWT_SECRET: string;
 
   NEST_PASSWORD_SECRET: string;
