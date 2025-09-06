@@ -9,30 +9,6 @@ import { AuthSignService } from './auth-sign.service';
 import { AuthService } from './auth.service';
 
 @Injectable()
-export class AdminGuard implements CanActivate {
-  constructor(private readonly authSignService: AuthSignService) {}
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<AppRequest>();
-    const token = this.extractTokenFromHeader(request);
-    if (!token) {
-      throw new UnauthorizedException();
-    }
-    const payloadResult = await this.authSignService.getAdminFromToken(token);
-    if (payloadResult.isErr()) {
-      throw new UnauthorizedException();
-    }
-    request.admin = payloadResult.value;
-    return true;
-  }
-
-  private extractTokenFromHeader(request: AppRequest): string | undefined {
-    const [type, token] = request.headers?.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
-  }
-}
-
-@Injectable()
 export class TeleAuthGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,

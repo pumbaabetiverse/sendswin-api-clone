@@ -47,31 +47,6 @@ export class DepositsService {
     private readonly depositNotificationService: DepositNotificationService,
   ) {}
 
-  async processSingleAccountTradeHistory(
-    account: BinanceAccount,
-  ): Promise<Result<void, Error>[]> {
-    const tradeHistoryResult =
-      await this.binanceService.getPayTradeHistory(account);
-
-    if (tradeHistoryResult.isErr()) {
-      return [err(tradeHistoryResult.error)];
-    }
-
-    const depositItems = tradeHistoryResult.value.filter((item) =>
-      this.isDepositHistory(item),
-    );
-
-    return (
-      await Promise.allSettled(
-        depositItems.map((item) =>
-          this.processDepositItemWithLock(item, account),
-        ),
-      )
-    ).map((result) =>
-      result.status === 'fulfilled' ? result.value : err(result.reason),
-    );
-  }
-
   private async processDepositItem(
     data: DepositProcessQueueDto,
   ): Promise<Result<void, Error>> {
@@ -88,7 +63,6 @@ export class DepositsService {
     const [userId, option] = this.parseTransactionNote(item.note);
 
     if (!userId || !option) {
-      this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
       return await this.insertDepositRecord(deposit);
     }
 
@@ -98,14 +72,11 @@ export class DepositsService {
     const user = (await this.usersService.findById(userId)).unwrapOr(null);
 
     if (!this.isValidUserForDeposit(user, deposit)) {
-      this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
       return await this.insertDepositRecord(deposit);
     }
 
     // Calculate game result and update deposit
     await this.calculateAndUpdateGameResult(deposit);
-
-    this.depositNotificationService.sendDepositNotificationToAdmin(deposit);
 
     // Save deposit and process-related actions
     const saveResult = await this.insertDepositRecord(deposit);

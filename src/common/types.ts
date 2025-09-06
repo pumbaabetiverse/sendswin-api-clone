@@ -1,4 +1,4 @@
-import { AdminUserPayload, AuthUserPayload } from '@/auth/auth.dto';
+import { AuthUserPayload } from '@/auth/auth.dto';
 import { InitData } from '@telegram-apps/init-data-node';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -40,7 +40,6 @@ export type RawRequest = FastifyRequest['raw'] &
   >;
 
 export type AppRequest = Omit<FastifyRequest, 'body'> & {
-  admin?: AdminUserPayload;
   query: Record<string, string>;
   body: Record<string, any>;
   clientIp?: string;

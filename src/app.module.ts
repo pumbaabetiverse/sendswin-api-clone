@@ -10,11 +10,9 @@ import { session } from 'telegraf';
 import { DepositsModule } from '@/deposits/deposit.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WithdrawModule } from '@/withdraw/withdraw.module';
-import { BlockchainModule } from '@/blockchain/blockchain.module';
 import { BullModule } from '@nestjs/bullmq';
 import { BinanceModule } from '@/binance/binance.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { EnvironmentVariables } from './common/types';
 import { HealthModule } from './health/health.module';
@@ -25,8 +23,6 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RedisModule } from '@nestjs-modules/ioredis';
-import { TelegramAdminModule } from '@/telegram-admin/telegram-admin.module';
-import { UploadModule } from '@/upload/upload.module';
 
 @Module({
   imports: [
@@ -144,15 +140,11 @@ import { UploadModule } from '@/upload/upload.module';
     UsersModule,
     DepositsModule,
     WithdrawModule,
-    BlockchainModule,
     BinanceModule,
-    AdminModule,
     AuthModule,
     GameModule,
     UserRefCircleModule,
     NotificationModule,
-    TelegramAdminModule,
-    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

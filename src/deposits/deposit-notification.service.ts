@@ -10,7 +10,6 @@ import { SettingService } from '@/setting/setting.service';
 import { TelegramService } from '@/telegram/telegram.service';
 import { User } from '@/users/user.entity';
 import { NotificationService } from '@/notification/notification.service';
-import { TelegramAdminService } from '@/telegram-admin/telegram-admin.service';
 
 @Injectable()
 export class DepositNotificationService {
@@ -18,7 +17,6 @@ export class DepositNotificationService {
     private readonly telegramService: TelegramService,
     private readonly settingService: SettingService,
     private readonly notificationService: NotificationService,
-    private readonly telegramAdminService: TelegramAdminService,
   ) {}
 
   async sendNewGameNotification(user: User, deposit: Deposit) {
@@ -34,23 +32,6 @@ export class DepositNotificationService {
       );
     }
     this.sendAppNotification(user, deposit);
-  }
-
-  sendDepositNotificationToAdmin(deposit: Deposit): Result<boolean, Error> {
-    const message = `
-📥 *New Deposit Notification*
-
-🆔 Order ID: \`${deposit.orderId}\`
-📝 Note: ${deposit.note || 'N/A'}
-💰 Currency: ${deposit.currency}
-💵 Amount: ${deposit.amount}
-💸 Payout: ${deposit.payout}
-🎯 Result: ${deposit.result}
-🎮 Option: \`${deposit.option || 'N/A'}\`
-👤 User ID: ${deposit.userId || 'N/A'}
-`;
-
-    return this.telegramAdminService.notify(message);
   }
 
   private sendAppNotification(user: User, deposit: Deposit): void {

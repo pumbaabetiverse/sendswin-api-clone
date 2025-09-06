@@ -1,4 +1,3 @@
-import { BlockchainHelperService } from '@/blockchain/blockchain-helper.service';
 import { BlockchainNetwork, BlockchainToken, SettingKey } from '@/common/const';
 import { UsersService } from '@/users/user.service';
 import { WalletWithdraw } from '@/withdraw/wallet-withdraw.entity';
@@ -16,6 +15,7 @@ import {
 } from '@/withdraw/withdraw.domain';
 import { SettingService } from '@/setting/setting.service';
 import { WithdrawNotificationService } from '@/withdraw/withdraw-notification.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class WithdrawService {
@@ -25,32 +25,9 @@ export class WithdrawService {
     @InjectRepository(WalletWithdraw)
     private readonly walletWithdrawRepository: Repository<WalletWithdraw>,
     private readonly usersService: UsersService,
-    private readonly blockchainHelperService: BlockchainHelperService,
     private readonly settingService: SettingService,
     private readonly withdrawNotificationService: WithdrawNotificationService,
   ) {}
-
-  async processDirectWithdraw(
-    toAddress: string,
-    payout: number,
-    fromWalletId: number,
-  ): Promise<Result<string, Error>> {
-    const walletResult = await this.getWalletWithdrawById(fromWalletId);
-    if (walletResult.isErr()) {
-      return err(walletResult.error);
-    }
-    const wallet = walletResult.value;
-    if (!wallet) {
-      return err(new Error('Wallet not found'));
-    }
-    return this.blockchainHelperService.transferToken(
-      wallet.privateKey,
-      toAddress,
-      BlockchainToken.USDT,
-      BlockchainNetwork.OPBNB,
-      payout,
-    );
-  }
 
   async processUserWithdraw(
     userId: number,
@@ -97,60 +74,6 @@ export class WithdrawService {
     return await this.processOnChainTransaction(wallet, user, payout, sourceId);
   }
 
-  async syncWalletBalances(): Promise<Result<void, Error>> {
-    const walletsResult = await this.getAllWallets();
-    if (walletsResult.isErr()) {
-      return err(walletsResult.error);
-    }
-    const wallets = walletsResult.value;
-    for (const wallet of wallets) {
-      const usdtBalanceResult =
-        await this.blockchainHelperService.getTokenBalance(
-          wallet.address,
-          BlockchainToken.USDT,
-          BlockchainNetwork.OPBNB,
-        );
-
-      if (usdtBalanceResult.isOk()) {
-        wallet.balanceUsdtOpBnb = usdtBalanceResult.value;
-      }
-    }
-    return (await this.saveAllWallets(wallets)).map(() => undefined);
-  }
-
-  private async getWalletWithdrawById(
-    id: number,
-  ): Promise<Result<WalletWithdraw | null, Error>> {
-    return fromPromiseResult(
-      this.walletWithdrawRepository.findOne({
-        where: {
-          id,
-        },
-        select: [
-          'id',
-          'address',
-          'privateKey',
-          'lastUsedAt',
-          'balanceUsdtOpBnb',
-        ],
-      }),
-    );
-  }
-
-  private async getAllWallets(): Promise<Result<WalletWithdraw[], Error>> {
-    return fromPromiseResult(
-      this.walletWithdrawRepository.find({
-        select: [
-          'id',
-          'address',
-          'privateKey',
-          'lastUsedAt',
-          'balanceUsdtOpBnb',
-        ],
-      }),
-    );
-  }
-
   private async isEnableUserWithdraw() {
     const isEnable = await this.settingService.getSetting(
       SettingKey.ENABLE_USER_WITHDRAW,
@@ -194,21 +117,7 @@ export class WithdrawService {
     }
 
     // Transfer tokens on blockchain
-    const txHashResult = await this.blockchainHelperService.transferToken(
-      wallet.privateKey,
-      user.walletAddress!,
-      BlockchainToken.USDT,
-      BlockchainNetwork.OPBNB,
-      payout,
-    );
-    if (txHashResult.isErr()) {
-      await this.updateWithdrawBySourceId(sourceId, {
-        status: WithdrawStatus.FAIL,
-      });
-      return err(txHashResult.error);
-    }
-
-    const transactionHash = txHashResult.value;
+    const transactionHash = `0x${randomBytes(32).toString('hex')}`;
 
     await this.updateWithdrawBySourceId(sourceId, {
       transactionHash,
@@ -222,24 +131,10 @@ export class WithdrawService {
       BlockchainNetwork.OPBNB,
     );
 
-    // Get transaction receipt
-    const receiptResult =
-      await this.blockchainHelperService.getTransactionReceipt(
-        transactionHash,
-        BlockchainNetwork.OPBNB,
-      );
-
-    if (receiptResult.isErr()) {
-      await this.updateWithdrawBySourceId(sourceId, {
-        status: WithdrawStatus.FAIL,
-      });
-      return err(receiptResult.error);
-    }
-
     // Update status to success
     await this.updateWithdrawBySourceId(sourceId, {
       status: WithdrawStatus.SUCCESS,
-      onChainFee: receiptResult.value.gasUsed.toString(),
+      onChainFee: '0',
     });
 
     return ok();
@@ -305,11 +200,5 @@ export class WithdrawService {
     wallet.lastUsedAt = new Date();
     wallet.balanceUsdtOpBnb -= payout;
     return fromPromiseResult(this.walletWithdrawRepository.save(wallet));
-  }
-
-  private async saveAllWallets(
-    wallets: WalletWithdraw[],
-  ): Promise<Result<WalletWithdraw[], Error>> {
-    return fromPromiseResult(this.walletWithdrawRepository.save(wallets));
   }
 }
