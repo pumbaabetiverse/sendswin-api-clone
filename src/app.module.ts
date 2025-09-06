@@ -62,7 +62,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
           type: 'single',
           url: redisUrl,
           options: {
-            tls: isTls == '0' ? undefined : {},
+            tls: isTls == '1' ? {} : undefined,
           },
         };
       },
