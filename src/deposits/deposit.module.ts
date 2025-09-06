@@ -12,9 +12,10 @@ import { NotificationModule } from '@/notification/notification.module';
 import { DepositNotificationService } from '@/deposits/deposit-notification.service';
 import { TelegramModule } from '@/telegram/telegram.module';
 import { GameModule } from '@/game/game.module';
+import { DepositController } from '@/deposits/deposit.controller';
 
 @Module({
-  controllers: [],
+  controllers: [DepositController],
   imports: [
     TypeOrmModule.forFeature([Deposit]),
     UsersModule,

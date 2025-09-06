@@ -76,7 +76,7 @@ export class BinanceService {
     );
   }
 
-  private async getBinanceAccountById(
+  public async getBinanceAccountById(
     id: number,
   ): Promise<Result<BinanceAccount | null, Error>> {
     return fromPromiseResult(

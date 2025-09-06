@@ -18,6 +18,13 @@ export interface PayTradeHistoryItem {
   };
 }
 
+export class NewDepositDto {
+  orderId: string;
+  note: string;
+  amount: string;
+  binanceId: number;
+}
+
 export class DepositWithTransactionHashDto extends Deposit {
   withdrawTransactionHash?: string;
 }

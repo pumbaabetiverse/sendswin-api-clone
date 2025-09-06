@@ -1,4 +1,4 @@
-import { Ctx, Message, Start, Update } from 'nestjs-telegraf';
+import { Ctx, Start, Update } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { Injectable, Logger } from '@nestjs/common';
 import { SettingService } from '@/setting/setting.service';
@@ -16,22 +16,14 @@ export class TelegramUpdate {
   ) {}
 
   @Start()
-  async startCommand(@Ctx() ctx: Context, @Message('text') message: string) {
+  async startCommand(@Ctx() ctx: Context) {
     if (!ctx.message) {
       return;
     }
-    const chatId = ctx.message.chat.id.toString();
-    const telegramId = ctx.message.from.id.toString();
+
     const firstName = ctx.message.from.first_name || '';
     const lastName = ctx.message.from.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim();
-    const refCode = message.split(' ')[1];
-    await this.userService.createOrUpdateUser(
-      telegramId,
-      fullName,
-      chatId,
-      refCode,
-    );
 
     const miniAppUrl = await this.settingService.getSetting(
       SettingKey.TELE_MINI_APP_URL,

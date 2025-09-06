@@ -3,6 +3,7 @@
 import { BinanceService } from '@/binance/binance.service';
 import {
   DepositProcessQueueDto,
+  NewDepositDto,
   PayTradeHistoryItem,
 } from '@/deposits/deposit.dto';
 import {
@@ -46,6 +47,34 @@ export class DepositsService {
     private readonly cacheService: CacheService,
     private readonly depositNotificationService: DepositNotificationService,
   ) {}
+
+  async addFakeNewDeposit(data: NewDepositDto) {
+    const binanceAccount = (
+      await this.binanceService.getBinanceAccountById(data.binanceId)
+    ).unwrapOr(null);
+    if (!binanceAccount) {
+      return;
+    }
+    await this.processDepositItemWithLock(
+      {
+        orderId: data.orderId,
+        amount: data.amount,
+        note: data.note,
+        currency: 'USDT',
+        counterpartyId: 1,
+        orderType: 'C2C',
+        payerInfo: {
+          name: 'Fake User',
+        },
+        uid: 0,
+        transactionTime: Date.now(),
+        transactionId: '0',
+        walletType: 0,
+        totalPaymentFee: '0',
+      },
+      binanceAccount,
+    );
+  }
 
   private async processDepositItem(
     data: DepositProcessQueueDto,
