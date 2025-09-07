@@ -32,9 +32,12 @@ import {
 import { fromPromiseResult } from '@/common/errors';
 import { DepositNotificationService } from '@/deposits/deposit-notification.service';
 import { GameService } from '@/game/game.service';
+import Snowflakify from 'snowflakify';
 
 @Injectable()
 export class DepositsService {
+  private readonly snowflake = new Snowflakify();
+
   constructor(
     @InjectRepository(Deposit)
     private readonly depositsRepository: Repository<Deposit>,
@@ -55,9 +58,10 @@ export class DepositsService {
     if (!binanceAccount) {
       return;
     }
+    const orderId = this.snowflake.nextId().toString();
     await this.processDepositItemWithLock(
       {
-        orderId: data.orderId,
+        orderId,
         amount: data.amount,
         note: data.note,
         currency: 'USDT',

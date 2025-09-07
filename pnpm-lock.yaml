@@ -142,6 +142,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      snowflakify:
+        specifier: ^1.0.5
+        version: 1.0.5
       telegraf:
         specifier: ^4.16.3
         version: 4.16.3
@@ -3736,6 +3739,7 @@ packages:
   multer@1.4.5-lts.2:
     resolution: {integrity: sha512-VzGiVigcG9zUAoCNU+xShztrlr1auZOlurXynNvO9GiWD1/mTBbUljOKY+qMeazBqXgRnjzeEgJI/wyjJUHg9A==}
     engines: {node: '>= 6.0.0'}
+    deprecated: Multer 1.x is impacted by a number of vulnerabilities, which have been patched in 2.x. You should upgrade to the latest 2.x version.
 
   mute-stream@2.0.0:
     resolution: {integrity: sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==}
@@ -4316,6 +4320,10 @@ packages:
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
+
+  snowflakify@1.0.5:
+    resolution: {integrity: sha512-QZ9QldPTAL5xRwLjYPk6SJGgOw0rB39KgNf4k7xXmlMY8zvS73SPMxqgXwNKmOyR7JjNZGjjO0vEKVhGDncRUw==}
+    engines: {node: '>=14.5.0'}
 
   sonic-boom@4.2.0:
     resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
@@ -9878,6 +9886,8 @@ snapshots:
   sisteransi@1.0.5: {}
 
   slash@3.0.0: {}
+
+  snowflakify@1.0.5: {}
 
   sonic-boom@4.2.0:
     dependencies:
