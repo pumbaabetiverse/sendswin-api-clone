@@ -9,6 +9,7 @@ import { Message } from 'telegraf/typings/core/types/typegram';
 import { fromPromiseResult } from '@/common/errors';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
+import { sleep } from '@/common/utils';
 
 @Injectable()
 export class TelegramService {
@@ -22,7 +23,7 @@ export class TelegramService {
     chatId: number,
     message: string,
     extra: ExtraReplyMessage = {},
-    delay: number = 3000,
+    delay: number = 0,
   ): Promise<Result<Job<TelegramMessage>, Error>> {
     return fromPromiseResult(
       this.telegramMessageQueue.add(
@@ -44,6 +45,7 @@ export class TelegramService {
     message: string,
     extra: ExtraReplyMessage = {},
   ): Promise<Result<Message.TextMessage, Error>> {
+    await sleep(3000);
     return fromPromiseResult(
       this.bot.telegram.sendMessage(chatId, message, extra),
     );
