@@ -1,5 +1,5 @@
 // src/telegram/telegram.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
@@ -12,8 +12,6 @@ import { Job, Queue } from 'bullmq';
 
 @Injectable()
 export class TelegramService {
-  private logger = new Logger(TelegramService.name);
-
   constructor(
     @InjectBot() private bot: Telegraf,
     @InjectQueue('telegram-message-queue')
@@ -24,7 +22,7 @@ export class TelegramService {
     chatId: number,
     message: string,
     extra: ExtraReplyMessage = {},
-    delay: number = 0,
+    delay: number = 3000,
   ): Promise<Result<Job<TelegramMessage>, Error>> {
     return fromPromiseResult(
       this.telegramMessageQueue.add(

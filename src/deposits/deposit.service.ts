@@ -33,6 +33,8 @@ import { fromPromiseResult } from '@/common/errors';
 import { DepositNotificationService } from '@/deposits/deposit-notification.service';
 import { GameService } from '@/game/game.service';
 import Snowflakify from 'snowflakify';
+import { SettingService } from '@/setting/setting.service';
+import { SettingKey } from '@/common/const';
 
 @Injectable()
 export class DepositsService {
@@ -49,6 +51,7 @@ export class DepositsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: CacheService,
     private readonly depositNotificationService: DepositNotificationService,
+    private readonly settingService: SettingService,
   ) {}
 
   async addFakeNewDeposit(data: NewDepositDto) {
@@ -56,9 +59,14 @@ export class DepositsService {
       await this.binanceService.getBinanceAccountById(data.binanceId)
     ).unwrapOr(null);
     if (!binanceAccount) {
-      return;
+      return '';
     }
-    const orderId = this.snowflake.nextId().toString();
+    const orderPrefix = await this.settingService.getSetting(
+      SettingKey.ORDER_PREFIX,
+      '385',
+    );
+    const snowFlakeId = this.snowflake.nextId().toString();
+    const orderId = `${orderPrefix}${snowFlakeId.substring(snowFlakeId.length - 15)}`;
     await this.processDepositItemWithLock(
       {
         orderId,
@@ -78,6 +86,7 @@ export class DepositsService {
       },
       binanceAccount,
     );
+    return orderId;
   }
 
   private async processDepositItem(

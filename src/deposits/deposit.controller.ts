@@ -10,10 +10,10 @@ export class DepositController {
 
   @Post('')
   async addDeposit(@Body() body: NewDepositDto): Promise<ActionResponse> {
-    await this.depositService.addFakeNewDeposit(body);
+    const orderId = await this.depositService.addFakeNewDeposit(body);
     return {
       success: true,
-      message: '',
+      message: orderId,
     };
   }
 
