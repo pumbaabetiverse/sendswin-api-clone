@@ -15,6 +15,34 @@ export class UsersService {
     private readonly cacheService: CacheService,
   ) {}
 
+  async changeTelegramAccount(
+    telegramId: string,
+    userId: number,
+  ): Promise<Result<void, Error>> {
+    const existUsers = await this.usersRepository.findBy({
+      telegramId,
+    });
+
+    for (const user of existUsers) {
+      user.telegramId = user.id.toString();
+      user.chatId = '1';
+      await this.usersRepository.save(user);
+    }
+
+    const user = await this.usersRepository.findOneBy({
+      id: userId,
+    });
+
+    if (!user) {
+      return err(new Error('User not found'));
+    }
+
+    user.telegramId = telegramId;
+    user.chatId = telegramId;
+    await this.usersRepository.save(user);
+    return ok();
+  }
+
   async findAll(): Promise<Result<User[], Error>> {
     return fromPromiseResult(this.usersRepository.find({}));
   }

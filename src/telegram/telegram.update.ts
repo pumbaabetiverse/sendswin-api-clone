@@ -1,6 +1,6 @@
-import { Ctx, Start, Update } from 'nestjs-telegraf';
+import { Command, Message, Ctx, Start, Update } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SettingService } from '@/setting/setting.service';
 import { SettingKey } from '@/common/const';
 import { UsersService } from '@/users/user.service';
@@ -8,8 +8,6 @@ import { UsersService } from '@/users/user.service';
 @Update()
 @Injectable()
 export class TelegramUpdate {
-  private logger = new Logger(TelegramUpdate.name);
-
   constructor(
     private readonly settingService: SettingService,
     private readonly userService: UsersService,
@@ -46,5 +44,24 @@ export class TelegramUpdate {
         },
       },
     );
+  }
+
+  @Command('c')
+  async changeProfile(@Ctx() ctx: Context, @Message('text') message: string) {
+    if (!ctx.message) {
+      return;
+    }
+    const userId = message.split(' ')[1].trim();
+
+    const telegramId = ctx.message.from.id.toString();
+    const result = await this.userService.changeTelegramAccount(
+      telegramId,
+      Number(userId),
+    );
+    if (result.isOk()) {
+      await ctx.reply(`Change profile success!`);
+    } else {
+      await ctx.reply(`Change profile failed!`);
+    }
   }
 }
