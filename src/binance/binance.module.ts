@@ -4,9 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BinanceService } from '@/binance/binance.service';
 import { SettingModule } from '@/setting/setting.module';
 import { CacheModule } from '@/cache/cache.module';
+import { BinanceController } from '@/binance/binance.controller';
 
 @Module({
-  controllers: [],
+  controllers: [BinanceController],
   imports: [
     TypeOrmModule.forFeature([BinanceAccount]),
     SettingModule,
