@@ -12,6 +12,7 @@ export interface EnvironmentVariables {
   DB_DATABASE: string;
   DB_SYNCHRONIZE: 'true' | 'false';
   DB_LOGGING: 'true' | 'false';
+  DB_SCHEMA: string;
 
   REDIS_URL: string;
   REDIS_TLS: string;

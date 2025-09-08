@@ -80,6 +80,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
         database: configService.get('DB_DATABASE', 'postgres'),
         synchronize: configService.get('DB_SYNCHRONIZE', { infer: true }),
         logging: configService.get('DB_LOGGING', false, { infer: true }),
+        schema: configService.get('DB_SCHEMA', 'public'),
         autoLoadEntities: true,
         poolSize: 15,
       }),
