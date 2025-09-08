@@ -1,5 +1,5 @@
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
-import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { UsersService } from '../user.service';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { User } from '../user.entity';
@@ -11,8 +11,6 @@ import { ActionResponse } from '@/common/dto/base.dto';
 
 @Controller('user')
 export class UserController {
-  private readonly logger = new Logger(UserController.name);
-
   constructor(private readonly userService: UsersService) {}
 
   @Get('me')
@@ -22,6 +20,11 @@ export class UserController {
   })
   async getMe(@AuthUser('userId') userId: number): Promise<User | null> {
     return (await this.userService.findById(userId)).unwrapOr(null);
+  }
+
+  @Get('all')
+  async getAll(): Promise<User[]> {
+    return (await this.userService.findAll()).unwrapOr([]);
   }
 
   @Post('me/wallet')
