@@ -22,6 +22,7 @@ export class NewDepositDto {
   note: string;
   amount: string;
   binanceId: number;
+  fromUserId: string;
 }
 
 export class DepositWithTransactionHashDto extends Deposit {

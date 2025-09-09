@@ -76,7 +76,7 @@ export class DepositsService {
         counterpartyId: 1,
         orderType: 'C2C',
         payerInfo: {
-          name: 'Fake User',
+          name: data.fromUserId,
         },
         uid: 0,
         transactionTime: Date.now(),
