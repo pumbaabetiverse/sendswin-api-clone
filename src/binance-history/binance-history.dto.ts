@@ -4,4 +4,5 @@ export class BinanceHistoryDto {
   amount: number;
   type: string;
   createdAt: Date;
+  toBinanceAccountId?: number;
 }

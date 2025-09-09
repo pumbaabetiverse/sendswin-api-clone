@@ -35,6 +35,7 @@ export class BinanceHistoryService {
       userId,
       type: 'send',
       createdAt: deposit.createdAt,
+      toBinanceAccountId: deposit.toBinanceAccountId,
     }));
     if (isSendOnly) {
       return deposits;
