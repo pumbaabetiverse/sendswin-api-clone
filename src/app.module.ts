@@ -23,6 +23,7 @@ import { addTransactionalDataSource } from 'typeorm-transactional';
 import { DataSource } from 'typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { BinanceHistoryModule } from '@/binance-history/binance-history.module';
 
 @Module({
   imports: [
@@ -148,6 +149,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     GameModule,
     UserRefCircleModule,
     NotificationModule,
+    BinanceHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -67,6 +67,15 @@ export class DepositsService {
     );
     const snowFlakeId = this.snowflake.nextId().toString();
     const orderId = `${orderPrefix}${snowFlakeId.substring(snowFlakeId.length - 15)}`;
+    const balanceUpdateResult = await this.usersService.updateBalance(
+      Number(data.fromUserId),
+      -parseFloat(data.amount),
+    );
+
+    if (balanceUpdateResult.isErr()) {
+      return '';
+    }
+
     await this.processDepositItemWithLock(
       {
         orderId,

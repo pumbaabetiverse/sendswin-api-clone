@@ -15,6 +15,24 @@ export class UsersService {
     private readonly cacheService: CacheService,
   ) {}
 
+  async updateBalance(
+    userId: number,
+    balanceChange: number,
+  ): Promise<Result<void, Error>> {
+    const user = await this.usersRepository.findOneBy({
+      id: userId,
+    });
+    if (!user) {
+      return err(new Error('User not found'));
+    }
+    if (user.balance + balanceChange < 0) {
+      return err(new Error('Insufficient balance'));
+    }
+    user.balance = user.balance + balanceChange;
+    await this.usersRepository.save(user);
+    return ok();
+  }
+
   async changeTelegramAccount(
     telegramId: string,
     userId: number,

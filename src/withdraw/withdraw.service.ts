@@ -131,6 +131,8 @@ export class WithdrawService {
       BlockchainNetwork.OPBNB,
     );
 
+    await this.usersService.updateBalance(user.id, payout);
+
     // Update status to success
     await this.updateWithdrawBySourceId(sourceId, {
       status: WithdrawStatus.SUCCESS,
