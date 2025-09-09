@@ -1,5 +1,12 @@
 import { Authenticated, AuthUser } from '@/common/decorators/common.decorator';
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { UsersService } from '../user.service';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { User } from '../user.entity';
@@ -77,5 +84,14 @@ export class UserController {
         message: res.error.message,
       };
     }
+  }
+
+  @Get('/:id')
+  async getUser(@Param('id') userId: number): Promise<User> {
+    const res = (await this.userService.findById(userId)).unwrapOr(null);
+    if (!res) {
+      throw new NotFoundException('user not found');
+    }
+    return res;
   }
 }

@@ -1,9 +1,5 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { NumericColumn } from '@/common/transform-decimal';
 
 @Entity('users')
 export class User {
@@ -31,6 +27,19 @@ export class User {
   @Column({ nullable: true })
   binanceUsername?: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @NumericColumn({
+    round: 6,
+    precision: 18,
+    scale: 6,
+    default: 0,
+  })
+  balance: number;
+
+  @NumericColumn({
+    round: 6,
+    precision: 18,
+    scale: 6,
+    default: 0,
+  })
+  previousBalance: number;
 }
