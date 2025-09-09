@@ -6,6 +6,13 @@ import { BinanceAccount } from '@/binance/binance.entity';
 export class BinanceController {
   constructor(private readonly binanceService: BinanceService) {}
 
+  @Get('')
+  async getAll(): Promise<BinanceAccount[]> {
+    return (await this.binanceService.getAll()).unwrapOr(
+      [] as BinanceAccount[],
+    );
+  }
+
   @Get(':id')
   async getById(@Param('id') id: number): Promise<BinanceAccount> {
     const account = (

@@ -14,6 +14,10 @@ export class BinanceService {
     private readonly cacheService: CacheService,
   ) {}
 
+  async getAll(): Promise<Result<BinanceAccount[], Error>> {
+    return fromPromiseResult(this.binanceAccountsRepository.find({}));
+  }
+
   async getCurrentRotateAccount(): Promise<Result<BinanceAccount, Error>> {
     const currentId = (await this.getCurrentRotateAccountId()).unwrapOr(null);
 
