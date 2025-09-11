@@ -136,21 +136,31 @@ export class DepositsService {
       return saveResult;
     }
 
+    const savedDeposit = await this.getDepositByOrderId(deposit.orderId);
+
+    if (!savedDeposit) {
+      return err(new Error('Deposit not saved'));
+    }
+
     // Process referral commission
-    if (deposit.result != DepositResult.VOID) {
-      this.addReferralContribution(deposit, user!);
+    if (savedDeposit.result != DepositResult.VOID) {
+      this.addReferralContribution(savedDeposit, user!);
     }
 
     // Send a new game message on Telegram notification
     await this.depositNotificationService.sendNewGameNotification(
       user!,
-      deposit,
+      savedDeposit,
     );
 
     // Add withdrawal winnings to the queue
-    await this.addWinningWithdrawal(deposit, user!);
+    await this.addWinningWithdrawal(savedDeposit, user!);
 
     return ok();
+  }
+
+  private async getDepositByOrderId(orderId: string): Promise<Deposit | null> {
+    return await this.depositsRepository.findOneBy({ orderId });
   }
 
   private async processDepositItemWithLock(
