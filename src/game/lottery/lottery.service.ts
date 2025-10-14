@@ -12,7 +12,7 @@ import {
   LotterySidePrize,
 } from '@/game/lottery/lottery.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 
 @Injectable()
 export class LotteryService {

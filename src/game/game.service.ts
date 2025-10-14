@@ -21,7 +21,7 @@ import { EventName } from '@/common/event-name';
 import { PaginationQuery } from '@/common/dto/pagination.dto';
 import { GameWalletDto } from '@/game/game.dto';
 import { SettingKey } from '@/common/const';
-import dayjs from 'dayjs';
+import dayjs from '@/common/dayjs';
 
 @Injectable()
 export class GameService {

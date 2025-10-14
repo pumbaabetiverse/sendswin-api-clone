@@ -2,7 +2,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserRefCircleEntity } from '@/referral/user-ref-circle.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { FindOptionsOrder, FindOptionsWhere, Repository } from 'typeorm';
-import dayjs from 'dayjs';
 import { UsersService } from '@/users/user.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -23,6 +22,7 @@ import {
 import { err, ok, Result } from 'neverthrow';
 import { fromPromiseResult } from '@/common/errors';
 import { UserRefCircleEntityExt } from '@/referral/user-ref-circle.dto';
+import dayjs from '@/common/dayjs';
 
 @Injectable()
 export class UserRefCircleService {
