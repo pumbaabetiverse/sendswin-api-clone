@@ -42,4 +42,7 @@ export class User {
     default: 0,
   })
   previousBalance: number;
+
+  @Column({ nullable: true })
+  password?: string;
 }

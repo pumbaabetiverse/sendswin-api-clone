@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthSignService } from './auth-sign.service';
 import { TeleAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
 
 @Global()
 @Module({
@@ -23,7 +24,7 @@ import { AuthService } from './auth.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [],
+  controllers: [AuthController],
   providers: [AuthService, TeleAuthGuard, AuthSignService],
   exports: [AuthService, AuthSignService],
 })

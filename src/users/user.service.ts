@@ -6,6 +6,7 @@ import { isAddress } from 'viem';
 import { err, ok, Result } from 'neverthrow';
 import { fromPromiseResult } from '@/common/errors';
 import { CacheService } from '@/cache/cache.service';
+import { hash } from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,75 @@ export class UsersService {
     private usersRepository: Repository<User>,
     private readonly cacheService: CacheService,
   ) {}
+
+  async createUserWithPassword(
+    username: string,
+    password: string,
+    inviteCode?: string,
+  ): Promise<Result<User, Error>> {
+    // Validate username length
+    if (username.length < 4 || username.length > 20) {
+      return err(new Error('Username must be between 4 and 20 characters'));
+    }
+
+    // Validate username characters: only letters (a-z, A-Z), digits (0-9), and underscore
+    const usernameRegex = /^[A-Za-z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+      return err(
+        new Error(
+          'Username may only contain letters (a-z, A-Z), numbers (0-9), and underscore (_).',
+        ),
+      );
+    }
+
+    // Validate password length
+    if (password.length < 4 || password.length > 32) {
+      return err(new Error('Password must be between 4 and 32 characters'));
+    }
+
+    // Validate password characters: similar to username plus @&!#
+    const passwordRegex = /^[A-Za-z0-9_@&!#]+$/;
+    if (!passwordRegex.test(password)) {
+      return err(
+        new Error(
+          'Password may only contain letters (a-z, A-Z), numbers (0-9), and symbols _@&!#',
+        ),
+      );
+    }
+
+    const telegramId = `user_${username}`;
+
+    const existingUserResult = await this.findByTelegramId(telegramId);
+
+    if (existingUserResult.isErr()) {
+      return err(existingUserResult.error);
+    }
+
+    if (existingUserResult.value) {
+      return err(new Error('Username already exists'));
+    }
+
+    let parentId: number | undefined;
+
+    if (inviteCode) {
+      const parentUserResult = await this.findUserByRefCode(inviteCode);
+      if (parentUserResult.isOk() && parentUserResult.value) {
+        parentId = parentUserResult.value.id;
+      }
+    }
+
+    const hashPassword = await hash(password, 10);
+
+    return this.saveUser(
+      this.usersRepository.create({
+        telegramId,
+        telegramFullName: telegramId,
+        password: hashPassword,
+        refCode: this.generateRandomString(8),
+        parentId,
+      }),
+    );
+  }
 
   async updateBalance(
     userId: number,

@@ -18,4 +18,14 @@ export class AuthSignService {
       }),
     );
   }
+
+  async genUserToken(userId: number): Promise<Result<string, Error>> {
+    const user: AuthUserPayload = { userId };
+    return fromPromiseResult(
+      this.jwtService.signAsync(user, {
+        audience: 'user',
+        expiresIn: '7d',
+      }),
+    );
+  }
 }
