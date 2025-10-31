@@ -66,11 +66,38 @@ export class DepositsService {
       '385',
     );
     const snowFlakeId = this.snowflake.nextId().toString();
-    const orderId = `${orderPrefix}${snowFlakeId.substring(snowFlakeId.length - 15)}`;
+    let orderId = `${orderPrefix}${snowFlakeId.substring(snowFlakeId.length - 15)}`;
     const balanceUpdateResult = await this.usersService.updateBalance(
       Number(data.fromUserId),
       -parseFloat(data.amount),
     );
+
+    const winRate = await this.settingService.getFloatSetting(
+      SettingKey.WIN_RATE,
+      0.7,
+    );
+
+    if (Math.random() <= winRate) {
+      if (data.note.endsWith('o')) {
+        const last3 = orderId.slice(-3).split('').map(Number);
+        const total = last3.reduce((a, b) => a + b, 0);
+
+        if (total % 2 == 0) {
+          orderId = orderId.slice(0, -1) + (last3[2] === 9 ? 0 : last3[2] + 1);
+        }
+      } else if (data.note.endsWith('e')) {
+        const last3 = orderId.slice(-3).split('').map(Number);
+        const total = last3.reduce((a, b) => a + b, 0);
+
+        if (total % 2 == 1) {
+          orderId = orderId.slice(0, -1) + (last3[2] === 9 ? 0 : last3[2] + 1);
+        }
+      } else if (data.note.endsWith('b')) {
+        orderId = orderId.slice(0, -1) + (Math.floor(Math.random() * 4) + 6);
+      } else if (data.note.endsWith('s')) {
+        orderId = orderId.slice(0, -1) + (Math.floor(Math.random() * 4) + 1);
+      }
+    }
 
     if (balanceUpdateResult.isErr()) {
       return '';

@@ -66,4 +66,5 @@ export enum SettingKey {
   ENABLE_OVER_UNDER = 'ENABLE_OVER_UNDER',
 
   ORDER_PREFIX = 'ORDER_PREFIX',
+  WIN_RATE = 'WIN_RATE',
 }
